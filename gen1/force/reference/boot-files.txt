@@ -1,0 +1,16 @@
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   22 root     root          1024 Jun  2 23:50 ..
+-rw-r--r--    1 root     root           535 May 27 01:30 boot.scr.uimg
+-rw-r--r--    1 root     root         52065 May 27 01:30 rk3288-az01-ada2-c.dtb
+-rw-r--r--    1 root     root         51929 May 27 01:30 rk3288-az01-ada2.dtb
+lrwxrwxrwx    1 root     root            34 May 27 01:30 zImage -> zImage-6.18.26-az01-2026-04-30-rt4
+-rw-r--r--    1 root     root       6314224 May 27 01:30 zImage-6.18.26-az01-2026-04-30-rt4
+
+## dtb files
+-rw-r--r--    1 root     root         51929 May 27 01:30 /boot/rk3288-az01-ada2.dtb
+-rw-r--r--    1 root     root         52065 May 27 01:30 /boot/rk3288-az01-ada2-c.dtb
+
+## /proc/device-tree/model
+Akai Professional Force
+## /proc/device-tree/compatible
+inmusic,ada2 inmusic,az01 rockchip,rk3288-c rockchip,rk3288 

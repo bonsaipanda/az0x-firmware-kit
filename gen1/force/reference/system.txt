@@ -1,0 +1,806 @@
+# Akai Force (gen1, "ADA2", Rockchip RK3288) -- system reference, collected read-only over SSH on 2026-11-07
+# Device firmware: Force 3.10.0 (BUILD_TAG below). NOTE: this unit runs a lightly modified rootfs:
+#   - az0x-* systemd units (az0x-data-mkfs, az0x-info, az0x-loadpin-trustpoints, az0x-setup-hostname,
+#     az0x-webserver) are NOT stock Akai; they come from the owner's own modded image.
+#   - /usr/bin/az01-launch-MPC has a "Pyraia boot hook" block prepended (also not stock).
+# Serial numbers are REDACTED.
+#
+# How the stock app is launched (summary of /usr/bin/az01-launch-MPC, stock part):
+#   acvs.service -> ExecStart=/usr/bin/az01-launch-MPC
+#   1. runs `dfu-util -l`; if a DFU device at 0x08000000 (the STM32 control-surface MCU in DFU mode)
+#      is present, runs the controller firmware updater script under /usr/share/Akai/SME0/Firmware/.
+#   2. if systemd-inhibit exists: exec systemd-inhibit --what=handle-power-key /usr/bin/MPC "$@"
+#      else: ulimit -S -s 1024; GLIBC_TUNABLES=glibc.malloc.hugetlb=2; MALLOC_ARENA_MAX=1;
+#            exec setarch -R -- /usr/bin/MPC "$@"
+
+## uname -a
+Linux force 6.18.26-az01-2026-04-30-rt4 #1 SMP PREEMPT_RT Thu Apr 30 11:00:46 UTC 2026 armv7l GNU/Linux
+
+## cat /etc/os-release
+ID=az01
+NAME="az0x (inMusic Brands AZ0x base distribution)"
+VERSION="5.0.17 (scarthgap)"
+VERSION_ID=5.0.17
+VERSION_CODENAME="scarthgap"
+PRETTY_NAME="az0x (inMusic Brands AZ0x base distribution) 5.0.17 (scarthgap)"
+CPE_NAME="cpe:/o:openembedded:az01:5.0.17"
+
+## cat /etc/az01-release
+AZ01_VERSION=9ad1b9c0
+BUILD_TAG=jenkins-ACVS-MPC3-SME1-MPC3-Yocto-412
+
+## cat /proc/cpuinfo
+processor	: 0
+model name	: ARMv7 Processor rev 1 (v7l)
+BogoMIPS	: 53.73
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xc0d
+CPU revision	: 1
+
+processor	: 1
+model name	: ARMv7 Processor rev 1 (v7l)
+BogoMIPS	: 53.73
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xc0d
+CPU revision	: 1
+
+processor	: 2
+model name	: ARMv7 Processor rev 1 (v7l)
+BogoMIPS	: 53.73
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xc0d
+CPU revision	: 1
+
+processor	: 3
+model name	: ARMv7 Processor rev 1 (v7l)
+BogoMIPS	: 53.73
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xc0d
+CPU revision	: 1
+
+Hardware	: Rockchip (Device Tree)
+Revision	: 0000
+Serial		: REDACTED
+
+## free
+              total        used        free      shared  buff/cache   available
+Mem:        2065132      123592     1752972       31016      188568     1847880
+Swap:             0           0           0
+
+## cat /proc/sys/kernel/loadpin/enforce
+1
+
+## ls /proc/sys/kernel/loadpin
+enforce
+
+## lsmod
+Module                  Size  Used by
+brcmfmac_wcc           12288  -2
+brcmfmac              208896  -2
+rockchip_rga           20480  -2
+videobuf2_dma_sg       12288  -2
+videobuf2_memops       12288  -2
+v4l2_mem2mem           16384  -2
+videobuf2_v4l2         20480  -2
+cfg80211              344064  -2
+videodev              180224  -2
+videobuf2_common       36864  -2
+snd_soc_rockchip_inmusic_jp07    16384  -2
+snd_soc_inmusic_jp07    16384  -2
+mc                     36864  -2
+snd_soc_rockchip_i2s    20480  -2
+brcmutil               12288  -2
+hci_uart               32768  -2
+btbcm                  12288  -2
+
+## ls -R /lib/modules/$(uname -r) | head -200
+head: invalid option -- '2'
+BusyBox v1.36.1 () multi-call binary.
+
+Usage: head [OPTIONS] [FILE]...
+
+## ls -R /lib/firmware
+/lib/firmware:
+LICENCE.broadcom_bcm43xx
+brcm
+cypress
+ilitek
+jms578_std_v00.01.00.06_self_power.bin
+regulatory.db
+regulatory.db.p7s
+
+/lib/firmware/brcm:
+BCM.hcd
+BCM4335C0.hcd
+BCM4345C0.hcd
+BCM4345C5.hcd
+brcmfmac4339-sdio.bin
+brcmfmac4339-sdio.txt
+brcmfmac43455-sdio.bin
+brcmfmac43455-sdio.txt
+brcmfmac43456-sdio.bin
+brcmfmac43456-sdio.txt
+
+/lib/firmware/cypress:
+cyfmac4339-sdio.bin
+
+/lib/firmware/ilitek:
+ili2116.fw
+ili2116.hex
+ili2117.bin
+
+## systemctl list-unit-files --no-pager | grep -v disabled
+UNIT FILE                                                                       STATE           PRESET
+dev-disk-by\x2dpartuuid-25c774f7\x2d1b5e\x2dba46\x2d9a61\x2dab2c2b6a7fb5.device static          -
+dev-disk-by\x2dpartuuid-3857e64c\x2df4b9\x2d5946\x2d961b\x2d3e20e0089aa1.device static          -
+dev-disk-by\x2dpath-platform\x2dff0c0000.dwmmc\x2dpart1.device                  static          -
+-.mount                                                                         generated       -
+data.mount                                                                      enabled         enabled
+dev-hugepages.mount                                                             static          -
+dev-mqueue.mount                                                                static          -
+etc.mount                                                                       enabled         enabled
+media-acvs\x2dsynths.mount                                                      enabled         enabled
+media-az01\x2dinternal.mount                                                    enabled         enabled
+media-az01\x2dinternal\x2dsd.mount                                              enabled         enabled
+media.mount                                                                     enabled         enabled
+sdcard.mount                                                                    enabled         enabled
+secure\x2dmedia.mount                                                           enabled         enabled
+synths.mount                                                                    enabled         enabled
+sys-fs-fuse-connections.mount                                                   static          -
+sys-kernel-config.mount                                                         static          -
+sys-kernel-debug.mount                                                          static          -
+sys-kernel-tracing.mount                                                        static          -
+tmp.mount                                                                       static          -
+var-volatile.mount                                                              generated       -
+var.mount                                                                       enabled         enabled
+systemd-ask-password-console.path                                               static          -
+systemd-ask-password-wall.path                                                  static          -
+acvs.service                                                                    enabled         enabled
+autovt@.service                                                                 alias           -
+az01-machine-id.service                                                         enabled         enabled
+az01-network-midi.service                                                       enabled         enabled
+az01-power-button.service                                                       static          -
+az01-script-runner.service                                                      enabled         enabled
+az01-unsupported-device-daemon.service                                          enabled         enabled
+az01-usbsata-fixer.service                                                      enabled         enabled
+az0x-data-mkfs.service                                                          static          -
+az0x-info.service                                                               enabled         enabled
+az0x-loadpin-trustpoints.service                                                enabled         enabled
+az0x-setup-hostname.service                                                     enabled         enabled
+az0x-webserver.service                                                          enabled         enabled
+bluetooth.service                                                               enabled         enabled
+connman.service                                                                 enabled         enabled
+container-getty@.service                                                        static          -
+dbus-com.inmusicbrands.unsupported_devices.service                              alias           -
+dbus-org.bluez.service                                                          alias           -
+dbus-org.freedesktop.hostname1.service                                          alias           -
+dbus-org.freedesktop.locale1.service                                            alias           -
+dbus-org.freedesktop.network1.service                                           alias           -
+dbus-org.freedesktop.resolve1.service                                           alias           -
+dbus-org.freedesktop.timedate1.service                                          alias           -
+dbus-org.freedesktop.timesync1.service                                          alias           -
+dbus.service                                                                    static          -
+edisksd.service                                                                 static          -
+emergency.service                                                               static          -
+getty@.service                                                                  enabled         enabled
+initrd-cleanup.service                                                          static          -
+initrd-parse-etc.service                                                        static          -
+initrd-switch-root.service                                                      static          -
+initrd-udevadm-cleanup-db.service                                               static          -
+ip6tables.service                                                               enabled         enabled
+iptables.service                                                                enabled         enabled
+kmod-static-nodes.service                                                       static          -
+ldconfig.service                                                                static          -
+modprobe@.service                                                               static          -
+no-reserved-blocks@.service                                                     static          -
+overlayfs-setup.service                                                         static          -
+quotaon.service                                                                 static          -
+rescue.service                                                                  static          -
+sshdgenkeys.service                                                             static          -
+system-update-cleanup.service                                                   static          -
+systemd-ask-password-console.service                                            static          -
+systemd-ask-password-wall.service                                               static          -
+systemd-battery-check.service                                                   static          -
+systemd-exit.service                                                            static          -
+systemd-fsck-root.service                                                       static          -
+systemd-fsck@.service                                                           static          -
+systemd-growfs-root.service                                                     static          -
+systemd-growfs@.service                                                         static          -
+systemd-halt.service                                                            static          -
+systemd-hibernate-resume.service                                                static          -
+systemd-hibernate.service                                                       static          -
+systemd-hostnamed.service                                                       static          -
+systemd-hwdb-update.service                                                     static          -
+systemd-hybrid-sleep.service                                                    static          -
+systemd-journal-catalog-update.service                                          static          -
+systemd-journal-flush.service                                                   static          -
+systemd-journald.service                                                        static          -
+systemd-journald@.service                                                       static          -
+systemd-kexec.service                                                           static          -
+systemd-localed.service                                                         static          -
+systemd-machine-id-commit.service                                               static          -
+systemd-modules-load.service                                                    static          -
+systemd-network-generator.service                                               enabled         enabled
+systemd-networkd-wait-online.service                                            enabled         enabled
+systemd-networkd.service                                                        enabled         enabled
+systemd-poweroff.service                                                        static          -
+systemd-quotacheck.service                                                      static          -
+systemd-random-seed.service                                                     static          -
+systemd-reboot.service                                                          static          -
+systemd-resolved.service                                                        enabled         enabled
+systemd-rfkill.service                                                          static          -
+systemd-soft-reboot.service                                                     static          -
+systemd-storagetm.service                                                       static          -
+systemd-suspend-then-hibernate.service                                          static          -
+systemd-suspend.service                                                         static          -
+systemd-sysctl.service                                                          static          -
+systemd-sysusers.service                                                        static          -
+systemd-timedated.service                                                       static          -
+systemd-timesyncd.service                                                       enabled         enabled
+systemd-tmpfiles-clean.service                                                  static          -
+systemd-tmpfiles-setup-dev-early.service                                        static          -
+systemd-tmpfiles-setup-dev.service                                              static          -
+systemd-tmpfiles-setup.service                                                  static          -
+systemd-udev-settle.service                                                     static          -
+systemd-udev-trigger.service                                                    static          -
+systemd-udevd.service                                                           static          -
+systemd-update-done.service                                                     static          -
+systemd-update-utmp.service                                                     static          -
+systemd-volatile-root.service                                                   static          -
+touch-fw-update.service                                                         enabled         enabled
+user-runtime-dir@.service                                                       static          -
+user@.service                                                                   static          -
+var-volatile-cache.service                                                      enabled         enabled
+var-volatile-lib.service                                                        enabled         enabled
+var-volatile-spool.service                                                      enabled         enabled
+var-volatile-srv.service                                                        enabled         enabled
+user.slice                                                                      static          -
+dbus.socket                                                                     static          -
+syslog.socket                                                                   static          -
+systemd-journald-audit.socket                                                   enabled         enabled
+systemd-journald-dev-log.socket                                                 static          -
+systemd-journald-varlink@.socket                                                static          -
+systemd-journald.socket                                                         static          -
+systemd-journald@.socket                                                        static          -
+systemd-rfkill.socket                                                           static          -
+systemd-udevd-control.socket                                                    static          -
+systemd-udevd-kernel.socket                                                     static          -
+systemd-userdbd.socket                                                          enabled         enabled
+basic.target                                                                    static          -
+blockdev@.target                                                                static          -
+bluetooth.target                                                                static          -
+boot-complete.target                                                            static          -
+default.target                                                                  alias           -
+emergency.target                                                                static          -
+factory-reset.target                                                            static          -
+final.target                                                                    static          -
+first-boot-complete.target                                                      static          -
+getty-pre.target                                                                static          -
+getty.target                                                                    static          -
+graphical.target                                                                static          -
+hibernate.target                                                                static          -
+hybrid-sleep.target                                                             static          -
+initrd-fs.target                                                                static          -
+initrd-root-device.target                                                       static          -
+initrd-root-fs.target                                                           static          -
+initrd-switch-root.target                                                       static          -
+initrd-usr-fs.target                                                            static          -
+initrd.target                                                                   static          -
+local-fs-pre.target                                                             static          -
+local-fs.target                                                                 static          -
+network-online.target                                                           static          -
+network-pre.target                                                              static          -
+network.target                                                                  static          -
+nss-lookup.target                                                               static          -
+nss-user-lookup.target                                                          static          -
+paths.target                                                                    static          -
+printer.target                                                                  static          -
+remote-fs-pre.target                                                            static          -
+remote-fs.target                                                                enabled         enabled
+rescue.target                                                                   static          -
+rpcbind.target                                                                  static          -
+shutdown.target                                                                 static          -
+sigpwr.target                                                                   static          -
+sleep.target                                                                    static          -
+slices.target                                                                   static          -
+smartcard.target                                                                static          -
+sockets.target                                                                  static          -
+soft-reboot.target                                                              static          -
+sound.target                                                                    static          -
+storage-target-mode.target                                                      static          -
+suspend-then-hibernate.target                                                   static          -
+suspend.target                                                                  static          -
+swap.target                                                                     static          -
+sysinit.target                                                                  static          -
+system-update-pre.target                                                        static          -
+system-update.target                                                            static          -
+time-set.target                                                                 static          -
+time-sync.target                                                                static          -
+timers.target                                                                   static          -
+umount.target                                                                   static          -
+usb-gadget.target                                                               static          -
+systemd-tmpfiles-clean.timer                                                    static          -
+
+211 unit files listed.
+
+## systemctl list-units --no-pager --type=service --state=running
+  UNIT                                   LOAD   ACTIVE SUB     DESCRIPTION
+  acvs.service                           loaded active running InMusic MPC Application
+  az01-network-midi.service              loaded active running AZ01 network MIDI service
+  az01-power-button.service              loaded active running AZ01 power button emergency shutdown service
+  az01-script-runner.service             loaded active running AZ01 script runner service
+  az01-unsupported-device-daemon.service loaded active running Unsupported device detection service
+  az01-usbsata-fixer.service             loaded active running AZ01 JMicron USB-SATA bridge configuration fixer
+  az0x-webserver.service                 loaded active running AZ0x Web Server
+  bluetooth.service                      loaded active running Bluetooth service
+  connman.service                        loaded active running Connection service
+  dbus.service                           loaded active running D-Bus System Message Bus
+  getty@tty1.service                     loaded active running Getty on tty1
+  serial-getty@ttyS2.service             loaded active running Serial Getty on ttyS2
+  sshd.service                           loaded active running OpenSSH server daemon
+  systemd-journald.service               loaded active running Journal Service
+  systemd-networkd.service               loaded active running Network Configuration
+  systemd-resolved.service               loaded active running Network Name Resolution
+  systemd-timesyncd.service              loaded active running Network Time Synchronization
+  systemd-udevd.service                  loaded active running Rule-based Manager for Device Events and Files
+  systemd-userdbd.service                loaded active running User Database Manager
+  wpa_supplicant.service                 loaded active running WPA supplicant
+
+Legend: LOAD   → Reflects whether the unit definition was properly loaded.
+        ACTIVE → The high-level unit activation state, i.e. generalization of SUB.
+        SUB    → The low-level unit activation state, values depend on unit type.
+
+20 loaded units listed.
+
+## cat /etc/inittab
+cat: can't open '/etc/inittab': No such file or directory
+
+## systemctl get-default
+multi-user.target
+
+## ls /etc/systemd/system /lib/systemd/system | grep -iE "az01|acvs|mpc|force|inmusic"
+dbus-com.inmusicbrands.unsupported_devices.service
+acvs.service
+az01-machine-id.service
+az01-network-midi.service
+az01-power-button.service
+az01-script-runner.service
+az01-unsupported-device-daemon.service
+az01-usbsata-fixer.service
+media-acvs\x2dsynths.mount
+media-az01\x2dinternal.mount
+media-az01\x2dinternal\x2dsd.mount
+
+## systemctl cat acvs.service
+# /usr/lib/systemd/system/acvs.service
+[Unit]
+Description=InMusic MPC Application
+Wants=az01-script-runner.service
+After=az01-network-midi.service az01-script-runner.service az01-usbsata-fixer.service touch-fw-update.service xmos-update.service
+
+[Service]
+Environment=LD_PRELOAD=/usr/lib/libforce_cursor.so
+ExecStart=/usr/bin/az01-launch-MPC
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+## systemctl cat az01-machine-id.service
+# /usr/lib/systemd/system/az01-machine-id.service
+[Unit]
+Description=Fix transient machine-id after mounting /etc
+RequiresMountsFor=/etc
+ConditionFileNotEmpty=/run/machine-id
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=systemd-tmpfiles-setup.service shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/mount -o bind,ro /run/machine-id /etc/machine-id
+
+[Install]
+WantedBy=local-fs.target
+
+## systemctl cat az01-network-midi.service
+# /usr/lib/systemd/system/az01-network-midi.service
+[Unit]
+Description=AZ01 network MIDI service
+Wants=network.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/start-remote-midi.sh
+Restart=always
+LimitRTTIME=1000
+
+[Install]
+WantedBy=multi-user.target
+
+## systemctl cat az01-power-button.service
+# /usr/lib/systemd/system/az01-power-button.service
+[Unit]
+Description=AZ01 power button emergency shutdown service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/az01-pwrbtn
+
+## systemctl cat az01-script-runner.service
+# /usr/lib/systemd/system/az01-script-runner.service
+[Unit]
+Description=AZ01 script runner service
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/az01-script-runner
+
+[Install]
+WantedBy=multi-user.target
+
+## systemctl cat az01-unsupported-device-daemon.service
+# /usr/lib/systemd/system/az01-unsupported-device-daemon.service
+[Unit]
+Description=Unsupported device detection service
+
+[Service]
+Type=dbus
+BusName=com.inmusicbrands.unsupported_devices
+ExecStart=/usr/libexec/az01-unsupp-dev
+LimitNPROC=1
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+Alias=dbus-com.inmusicbrands.unsupported_devices.service
+WantedBy=multi-user.target
+
+## systemctl cat az01-usbsata-fixer.service
+# /usr/lib/systemd/system/az01-usbsata-fixer.service
+[Unit]
+Description=AZ01 JMicron USB-SATA bridge configuration fixer
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/az01-usbsata-fixer --firmware /usr/lib/firmware/jms578_std_v00.01.00.06_self_power.bin
+
+[Install]
+WantedBy=multi-user.target
+
+## systemctl cat az0x-data-mkfs.service
+# /usr/lib/systemd/system/az0x-data-mkfs.service
+[Unit]
+Description=Create /data filesystem if necessary
+DefaultDependencies=no
+Conflicts=shutdown.target
+Requires=dev-disk-by\x2dpartuuid-931ad49d\x2dad59\x2d0849\x2d833a\x2d9bf00af5b60e.device
+After=dev-disk-by\x2dpartuuid-931ad49d\x2dad59\x2d0849\x2d833a\x2d9bf00af5b60e.device
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/az0x-data-mkfs
+
+## systemctl cat az0x-info.service
+# /usr/lib/systemd/system/az0x-info.service
+[Unit]
+Description=AZ0x system info logging
+After=systemd-udev-trigger.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal
+ExecStart=/usr/bin/az0x-info
+
+[Install]
+WantedBy=multi-user.target
+
+## systemctl cat az0x-loadpin-trustpoints.service
+# /usr/lib/systemd/system/az0x-loadpin-trustpoints.service
+[Unit]
+Description=Configure verity trustpoints for LoadPin
+DefaultDependencies=no
+Before=local-fs-pre.target
+Before=shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/az0x-loadpin-trustpoints
+
+[Install]
+WantedBy=sysinit.target
+
+## systemctl cat az0x-setup-hostname.service
+# /usr/lib/systemd/system/az0x-setup-hostname.service
+[Unit]
+Description=Hostname setup for AZ0x
+RequiresMountsFor=/var
+DefaultDependencies=no
+Before=network-pre.target network.target dbus.socket shutdown.target
+Conflicts=shutdown.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/az0x-setup-hostname
+
+[Install]
+WantedBy=multi-user.target
+
+## systemctl cat az0x-webserver.service
+# /usr/lib/systemd/system/az0x-webserver.service
+[Unit]
+Description=AZ0x Web Server
+
+[Service]
+Type=simple
+StandardOutput=journal
+ExecStart=/usr/bin/az0x-webserver
+
+[Install]
+WantedBy=multi-user.target
+
+## systemctl cat dbus-com.inmusicbrands.unsupported_devices.service
+# /usr/lib/systemd/system/az01-unsupported-device-daemon.service
+[Unit]
+Description=Unsupported device detection service
+
+[Service]
+Type=dbus
+BusName=com.inmusicbrands.unsupported_devices
+ExecStart=/usr/libexec/az01-unsupp-dev
+LimitNPROC=1
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+Alias=dbus-com.inmusicbrands.unsupported_devices.service
+WantedBy=multi-user.target
+
+## ls -la /etc/systemd/system/*.wants /etc/systemd/system/*.d 2>/dev/null
+/etc/systemd/system/bluetooth.target.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            41 May 27 01:30 bluetooth.service -> /usr/lib/systemd/system/bluetooth.service
+
+/etc/systemd/system/getty.target.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            38 May 27 01:30 getty@tty1.service -> /usr/lib/systemd/system/getty@.service
+
+/etc/systemd/system/local-fs.target.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            47 May 27 01:30 az01-machine-id.service -> /usr/lib/systemd/system/az01-machine-id.service
+lrwxrwxrwx    1 root     root            34 May 27 01:30 data.mount -> /usr/lib/systemd/system/data.mount
+lrwxrwxrwx    1 root     root            33 May 27 01:30 etc.mount -> /usr/lib/systemd/system/etc.mount
+lrwxrwxrwx    1 root     root            50 May 27 01:30 media-acvs\x2dsynths.mount -> /usr/lib/systemd/system/media-acvs\x2dsynths.mount
+lrwxrwxrwx    1 root     root            52 May 27 01:30 media-az01\x2dinternal.mount -> /usr/lib/systemd/system/media-az01\x2dinternal.mount
+lrwxrwxrwx    1 root     root            58 May 27 01:30 media-az01\x2dinternal\x2dsd.mount -> /usr/lib/systemd/system/media-az01\x2dinternal\x2dsd.mount
+lrwxrwxrwx    1 root     root            35 May 27 01:30 media.mount -> /usr/lib/systemd/system/media.mount
+lrwxrwxrwx    1 root     root            36 May 27 01:30 sdcard.mount -> /usr/lib/systemd/system/sdcard.mount
+lrwxrwxrwx    1 root     root            45 May 27 01:30 secure\x2dmedia.mount -> /usr/lib/systemd/system/secure\x2dmedia.mount
+lrwxrwxrwx    1 root     root            36 May 27 01:30 synths.mount -> /usr/lib/systemd/system/synths.mount
+lrwxrwxrwx    1 root     root            50 May 27 01:30 var-volatile-cache.service -> /usr/lib/systemd/system/var-volatile-cache.service
+lrwxrwxrwx    1 root     root            48 May 27 01:30 var-volatile-lib.service -> /usr/lib/systemd/system/var-volatile-lib.service
+lrwxrwxrwx    1 root     root            50 May 27 01:30 var-volatile-spool.service -> /usr/lib/systemd/system/var-volatile-spool.service
+lrwxrwxrwx    1 root     root            48 May 27 01:30 var-volatile-srv.service -> /usr/lib/systemd/system/var-volatile-srv.service
+lrwxrwxrwx    1 root     root            33 May 27 01:30 var.mount -> /usr/lib/systemd/system/var.mount
+
+/etc/systemd/system/multi-user.target.wants:
+drwxr-xr-x    2 root     root          1024 Jun 20 04:23 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            36 May 27 01:30 acvs.service -> /usr/lib/systemd/system/acvs.service
+lrwxrwxrwx    1 root     root            49 May 27 01:30 az01-network-midi.service -> /usr/lib/systemd/system/az01-network-midi.service
+lrwxrwxrwx    1 root     root            50 May 27 01:30 az01-script-runner.service -> /usr/lib/systemd/system/az01-script-runner.service
+lrwxrwxrwx    1 root     root            62 May 27 01:30 az01-unsupported-device-daemon.service -> /usr/lib/systemd/system/az01-unsupported-device-daemon.service
+lrwxrwxrwx    1 root     root            50 May 27 01:30 az01-usbsata-fixer.service -> /usr/lib/systemd/system/az01-usbsata-fixer.service
+lrwxrwxrwx    1 root     root            41 May 27 01:30 az0x-info.service -> /usr/lib/systemd/system/az0x-info.service
+lrwxrwxrwx    1 root     root            51 May 27 01:30 az0x-setup-hostname.service -> /usr/lib/systemd/system/az0x-setup-hostname.service
+lrwxrwxrwx    1 root     root            46 May 27 01:30 az0x-webserver.service -> /usr/lib/systemd/system/az0x-webserver.service
+lrwxrwxrwx    1 root     root            39 May 27 01:30 connman.service -> /usr/lib/systemd/system/connman.service
+lrwxrwxrwx    1 root     root            41 May 27 01:30 ip6tables.service -> /usr/lib/systemd/system/ip6tables.service
+lrwxrwxrwx    1 root     root            40 May 27 01:30 iptables.service -> /usr/lib/systemd/system/iptables.service
+lrwxrwxrwx    1 root     root            40 May 27 01:30 remote-fs.target -> /usr/lib/systemd/system/remote-fs.target
+lrwxrwxrwx    1 root     root            36 Jun 20 04:23 sshd.service -> /usr/lib/systemd/system/sshd.service
+lrwxrwxrwx    1 root     root            48 May 27 01:30 systemd-networkd.service -> /usr/lib/systemd/system/systemd-networkd.service
+lrwxrwxrwx    1 root     root            47 May 27 01:30 touch-fw-update.service -> /usr/lib/systemd/system/touch-fw-update.service
+
+/etc/systemd/system/network-online.target.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            60 May 27 01:30 systemd-networkd-wait-online.service -> /usr/lib/systemd/system/systemd-networkd-wait-online.service
+
+/etc/systemd/system/sockets.target.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            53 May 27 01:30 systemd-journald-audit.socket -> /usr/lib/systemd/system/systemd-journald-audit.socket
+lrwxrwxrwx    1 root     root            47 May 27 01:30 systemd-networkd.socket -> /usr/lib/systemd/system/systemd-networkd.socket
+lrwxrwxrwx    1 root     root            46 May 27 01:30 systemd-userdbd.socket -> /usr/lib/systemd/system/systemd-userdbd.socket
+
+/etc/systemd/system/sysinit.target.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            56 May 27 01:30 az0x-loadpin-trustpoints.service -> /usr/lib/systemd/system/az0x-loadpin-trustpoints.service
+lrwxrwxrwx    1 root     root            45 May 27 01:30 run-postinsts.service -> /usr/lib/systemd/system/run-postinsts.service
+lrwxrwxrwx    1 root     root            57 May 27 01:30 systemd-network-generator.service -> /usr/lib/systemd/system/systemd-network-generator.service
+lrwxrwxrwx    1 root     root            48 May 27 01:30 systemd-resolved.service -> /usr/lib/systemd/system/systemd-resolved.service
+lrwxrwxrwx    1 root     root            49 May 27 01:30 systemd-timesyncd.service -> /usr/lib/systemd/system/systemd-timesyncd.service
+
+/etc/systemd/system/systemd-journald.service.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            53 May 27 01:30 systemd-journald-audit.socket -> /usr/lib/systemd/system/systemd-journald-audit.socket
+
+/etc/systemd/system/systemd-random-seed.service.wants:
+drwxr-xr-x    2 root     root          1024 May 27 01:30 .
+drwxr-xr-x   11 root     root          1024 May 27 01:30 ..
+lrwxrwxrwx    1 root     root            48 May 27 01:30 var-volatile-lib.service -> /usr/lib/systemd/system/var-volatile-lib.service
+
+## aplay -l
+sh: aplay: not found
+
+## amidi -l
+Dir Device    Name
+IO  hw:0,0,0  Akai Pro Force Public
+IO  hw:0,0,1  Akai Pro Force Private
+IO  hw:0,0,2  Akai Pro Force MIDI Port
+
+## ls -la /dev/input /dev/input/by-path /dev/input/by-id
+/dev/input:
+drwxr-xr-x    4 root     root           200 Nov  7 21:51 .
+drwxr-xr-x   14 root     root          3140 Nov  7 21:51 ..
+drwxr-xr-x    2 root     root            80 Nov  7 21:51 by-id
+drwxr-xr-x    2 root     root           160 Nov  7 21:51 by-path
+crw-rw----    1 root     input      13,  64 Nov  7 21:51 event0
+crw-rw----    1 root     input      13,  65 Nov  7 21:51 event1
+crw-rw----    1 root     input      13,  66 Nov  7 21:51 event2
+crw-rw----    1 root     input      13,  67 Nov  7 21:51 event3
+crw-rw----    1 root     input      13,  68 Nov  7 21:51 event4
+crw-rw----    1 root     input      13,  69 Nov  7 21:51 event5
+
+/dev/input/by-id:
+drwxr-xr-x    2 root     root            80 Nov  7 21:51 .
+drwxr-xr-x    4 root     root           200 Nov  7 21:51 ..
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 usb-1bcf_08a0-event-kbd -> ../event3
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 usb-1bcf_08a0-event-mouse -> ../event2
+
+/dev/input/by-path:
+drwxr-xr-x    2 root     root           160 Nov  7 21:51 .
+drwxr-xr-x    4 root     root           200 Nov  7 21:51 ..
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 platform-ff160000.i2c-event -> ../event0
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 platform-ff500000.usb-usb-0:1.1:1.0-event-kbd -> ../event3
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 platform-ff500000.usb-usb-0:1.1:1.0-event-mouse -> ../event2
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 platform-ff500000.usb-usbv2-0:1.1:1.0-event-kbd -> ../event3
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 platform-ff500000.usb-usbv2-0:1.1:1.0-event-mouse -> ../event2
+lrwxrwxrwx    1 root     root             9 Nov  7 21:51 platform-gpio-keys-event -> ../event1
+
+## cat /proc/bus/input/devices
+I: Bus=0018 Vendor=0000 Product=0000 Version=0000
+N: Name="ILI2116 Touchscreen"
+P: Phys=
+S: Sysfs=/devices/platform/ff160000.i2c/i2c-4/4-0041/input/input0
+U: Uniq=
+H: Handlers=event0 
+B: PROP=0
+B: EV=b
+B: KEY=400 0 0 0 0 0 0 0 0 0 0
+B: ABS=2608000 3
+
+I: Bus=0019 Vendor=0001 Product=0001 Version=0100
+N: Name="gpio-keys"
+P: Phys=gpio-keys/input0
+S: Sysfs=/devices/platform/gpio-keys/input/input1
+U: Uniq=
+H: Handlers=kbd event1 
+B: PROP=0
+B: EV=3
+B: KEY=100000 0 0 0
+
+I: Bus=0003 Vendor=1bcf Product=08a0 Version=0110
+N: Name="HID 1bcf:08a0 Mouse"
+P: Phys=usb-ff500000.usb-1.1/input0
+S: Sysfs=/devices/platform/ff500000.usb/usb2/2-1/2-1.1/2-1.1:1.0/0003:1BCF:08A0.0001/input/input2
+U: Uniq=
+H: Handlers=event2 
+B: PROP=0
+B: EV=17
+B: KEY=1f0000 0 0 0 0 0 0 0 0
+B: REL=903
+B: MSC=10
+
+I: Bus=0003 Vendor=1bcf Product=08a0 Version=0110
+N: Name="HID 1bcf:08a0 Keyboard"
+P: Phys=usb-ff500000.usb-1.1/input0
+S: Sysfs=/devices/platform/ff500000.usb/usb2/2-1/2-1.1/2-1.1:1.0/0003:1BCF:08A0.0001/input/input3
+U: Uniq=
+H: Handlers=sysrq kbd leds event3 
+B: PROP=0
+B: EV=12001f
+B: KEY=3f 33fff 0 0 0 0 483ffff 17aff32d bfd44446 0 0 1 130ff3 8b17d007 ffff7bfa d9415fff ffbeffdf ffefffff ffffffff fffffffe
+B: REL=1040
+B: ABS=1 0
+B: MSC=10
+B: LED=1f
+
+I: Bus=0003 Vendor=1234 Product=5678 Version=0000
+N: Name="Virtual Mouse Touch"
+P: Phys=
+S: Sysfs=/devices/virtual/input/input4
+U: Uniq=
+H: Handlers=event4 
+B: PROP=0
+B: EV=b
+B: KEY=400 0 0 0 0 0 0 0 0 0 0
+B: ABS=3
+
+I: Bus=0003 Vendor=1234 Product=5679 Version=0000
+N: Name="Virtual Mouse Wheel"
+P: Phys=
+S: Sysfs=/devices/virtual/input/input5
+U: Uniq=
+H: Handlers=event5 
+B: PROP=0
+B: EV=7
+B: KEY=10000 0 0 0 0 0 0 0 0
+B: REL=143
+
+
+## cat /proc/asound/cards
+ 0 [Force          ]: USB-Audio - Akai Pro Force
+                      Akai Pro Akai Pro Force at usb-ff500000.usb-1.5, full speed
+ 1 [ADA2           ]: ADA2 - ADA2
+                      ADA2
+
+## cat /proc/asound/pcm
+01-00: ADA2 PCM inmusic,ada2-audio-codec-0 : ADA2 PCM inmusic,ada2-audio-codec-0 : playback 1 : capture 1
+
+## lsusb
+sh: lsusb: not found
+
+## cat /sys/bus/usb/devices/*/product 2>/dev/null
+Akai Pro Force
+Force Hub
+DWC OTG Controller
+EHCI Host Controller
+
+## for d in /sys/bus/usb/devices/*; do [ -f $d/idVendor ] && echo $(basename $d) $(cat $d/idVendor):$(cat $d/idProduct) $(cat $d/manufacturer 2>/dev/null) / $(cat $d/product 2>/dev/null); done
+2-1 09e8:5040 Akai Professional / Force Hub
+2-1.1 1bcf:08a0 /
+2-1.5 09e8:0040 Akai Pro / Akai Pro Force
+usb1 1d6b:0002 Linux 6.18.26-az01-2026-04-30-rt4 dwc2_hsotg / DWC OTG Controller
+usb2 1d6b:0002 Linux 6.18.26-az01-2026-04-30-rt4 ehci_hcd / EHCI Host Controller
+
+## ls /dev/fb0 /dev/dri
+/dev/fb0
+
+/dev/dri:
+by-path
+card0
+card1
+renderD128
+
+## cat /sys/class/drm/card0-DSI-1/modes
+800x1280

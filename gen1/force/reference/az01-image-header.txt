@@ -1,0 +1,193 @@
+AZ01 v1 update-image container -- reference notes
+=================================================
+Source file: Force-3.10.0-update.img (186528232 bytes), Akai's official Force 3.10.0 update.
+Cross-checked against MPC-3.10.0-Gen1-update.img (167084848 bytes).
+Only the container metadata is reproduced here; no payload is included beyond the first bytes shown in the dump.
+
+All integers are LITTLE-ENDIAN. "str" and "blob" are length-prefixed:
+  str  = u32 len (bytes, excluding NUL) + len bytes + NUL + zero padding so the whole
+         string field (bytes+NUL+pad) is align4(len+1) bytes.
+         e.g. "rootfs"(6) -> 4 + 8 bytes; "sha1"(4) -> 4 + 8 bytes; "inmusic,ada2"(12) -> 4 + 16 bytes.
+  blob = u32 len + len bytes + zero padding to align4(len)   (no NUL)
+
+File header
+-----------
+off   size  type      Force value                          meaning
+0x00  4     char[4]   "AZ01"                               magic
+0x04  4     u32       1                                    container format version (v1)
+0x08  4     u32       0x74 (MPC: 0x108)                    header length = offset just past the description string
+0x0c  var   str       "SNAPSHOT-20261014151952"            image version / build string
+...   4     u32       1 (MPC: 8)                           number of DT-compatible strings that follow
+...   var   str[n]    "inmusic,ada2"                       accepted /proc/device-tree/compatible entries
+                                                           (MPC Gen1 image: acv5 acv8 acva acva2 acvb acvm acvr acv5s)
+...   4     u32       1 (MPC: 8)                           number of USB-ID entries that follow
+...   4*n   u32[n]    0x09e84040 -> 09e8:4040              USB VID:PID (VID in high 16 bits, PID in low 16) of the
+                                                           device in USB update mode (MPC: 09e8:403a 403b 4046 4047
+                                                           404b 4052 4056 4057)
+...   var   str       "Akai Professional Force upgrade image"  description (MPC: "MPC upgrade image")
+= header_len
+pad   0-7             zeros                                padding so the first record starts at align8(header_len)
+                                                           (Force: 4 zero bytes at 0x74..0x77, first record at 0x78;
+                                                           MPC: header_len 0x108 is already 8-aligned, no padding)
+
+Records (from align8(header_len) until the EOF record)
+------------------------------------------------------
+Every record starts with the same 16-byte prefix:
+  +0x00  4  char[4]  tag: "PART" or "EOF\0"
+  +0x04  4  u32      record header length in bytes, counted from the tag up to the first payload byte
+  +0x08  8  u64      payload length in bytes (the payload follows the record header directly)
+
+PART record (Force: at 0x78, header length 0x4c = 76):
+  +0x00  4    "PART"
+  +0x04  4    u32  0x4c                     record header length
+  +0x08  8    u64  186528020 (0x0b1e3114)   payload length (compressed size)
+  +0x10  var  str  "rootfs"                 target partition, by GPT PARTLABEL
+  +0x1c  var  str  "xz"                     payload compression ("xz" = standard .xz stream)
+  +0x24  4    u32  1                        number of hash entries that follow
+  +0x28  var  str  "sha1"                   hash algorithm (strings in libaz01-prog also know "sha256")
+  +0x34  var  blob 20 bytes                 hash value: 693ff81c8fd36eb1f9de5ed285703436fe41c2bc
+  +0x4c       payload: 186528020 bytes of xz data (begins fd 37 7a 58 5a 00), decompresses to
+              a raw ext4 image of 473595904 bytes, which is written to the "rootfs" partition (500 MiB).
+  The next record starts at align8(payload end). (Both observed images end their payload on an
+  8-byte boundary already, so the presence of padding there is inferred from the header case.)
+
+EOF record (Force: at 0x0b1e31d8, last 16 bytes of the file):
+  +0x00  4  "EOF\0"
+  +0x04  4  u32 0x10   record header length (16)
+  +0x08  8  u64 0      payload length 0
+  The EOF record ends exactly at end of file (Force: 0x0b1e31e8 = file size).
+
+What the sha1 covers
+--------------------
+The SHA-1 in a PART record is computed over the PAYLOAD BYTES AS STORED IN THE FILE (the compressed
+.xz stream, exactly payload_len bytes). It does NOT cover the decompressed data, the record header, or
+the file header. Verified for both images (compressed: match; decompressed: no match).
+There is no signature anywhere in a v1 container; integrity is the per-partition hash only.
+
+Multiple PART records
+---------------------
+The record framing (tag + header length + u64 payload length, terminated by an explicit EOF record)
+allows any number of PART records in sequence, one per target partition. Both official 3.10 images
+contain exactly one (rootfs), so multi-PART files are not confirmed against a real Akai image.
+
+Verification
+------------
+A throwaway Python parser walked both images with exactly the rules above, asserted that every header
+and record parsed to its declared length, that the EOF record ends at end of file, and recomputed the
+SHA-1 over the payloads:
+  Force-3.10.0-update.img        rootfs xz 186528020 bytes  sha1 693ff81c...c2bc  OK  -> 473595904 bytes ext4
+  MPC-3.10.0-Gen1-update.img     rootfs xz 167084492 bytes  sha1 668af0cc...1121  OK  -> 451468288 bytes ext4
+
+Updater strings (text summary, from libaz01-prog.so.1.3 and the update ramdisk's /usr/sbin/init)
+-------------------------------------------------------------------------------------------------
+Magics recognised: "AZ01" (this binary v1 format) and "AZ0x" (newer formats). libaz01-prog exports
+az01_image_v2_ops, az01_image_v3_ops and az01_image_fdt_ops: v2/v3 are FDT (device-tree blob) based
+images with signatures (az01_image_for_each_signature, az01_verify_signature, RSA "sha256,rsa2048",
+public keys looked up in /usr/lib/az01/pubkeys and /usr/lib/az0x/pubkeys as <name>.pub).
+FDT image keys/nodes seen: /images, /configurations, default, description, compatible,
+  inmusic,devices, inmusic,version, inmusic,generation-number, partition, compression, data,
+  data-offset, data-size, data-position, hash, algo, value (algos: sha1, sha256).
+Partition / target names seen: rootfs (from the v1 PART record), data (erase-data-partition),
+  spl, u-boot, uboot-spl, uboot, spl1, spl2, uboot1, uboot2 (bootloader writes), config;
+  GPT on the Force also has env, splash, recoverysplash, synths.
+Compression: xz (liblzma, multi-threaded stream decoder; index used to learn the uncompressed size).
+Update flow strings: the running system stores the image (default path /data/az01-update.img), then
+  either reboots with "--reboot-argument=update:<dev>:<file>" or kexecs /boot/zImage with
+  /opt/ramfs-update.squashfs as ramdisk and "ramdisk_size=32768 root=/dev/ram0 ro -- upgrade-device=%s
+  upgrade-file=%s". The ramdisk init mounts the source device (exfat/ntfs-3g/etc.), verifies the image
+  ("verifying image (%s)...", "image verified OK"), then "writing partition %s (%zu bytes)".
+  Other ramdisk options: upgrade-debug-shell, upgrade-fallback-shell, erase-data-partition.
+  Updates and data erase are refused unless on mains power
+  (/sys/class/power_supply/az01-ac-power/online or .../mains-power/online).
+  Compatibility is checked against /sys/firmware/devicetree/base/compatible, inmusic,product-code
+  and inmusic,az0N-pcb-rev.
+USB (fastboot/rockusb) commands seen: getvar:max-download-size, getvar:power-source, getvar:partition-type:%s,
+  getvar:version-bootloader, getvar:sparse-image-support, download:%08x, flash:%s, erase:%s,
+  reboot-bootloader, oem fetch-pubkey:%s, oem flash-bootloader, oem update-bootloader, oem format,
+  oem resetenv, oem set-panel-map:%s, oem set-flag:%s, program-fuses.
+
+xxd: first 1024 bytes
+---------------------
+00000000: 415a 3031 0100 0000 7400 0000 1700 0000  AZ01....t.......
+00000010: 534e 4150 5348 4f54 2d32 3032 3631 3031  SNAPSHOT-2026101
+00000020: 3431 3531 3935 3200 0100 0000 0c00 0000  4151952.........
+00000030: 696e 6d75 7369 632c 6164 6132 0000 0000  inmusic,ada2....
+00000040: 0100 0000 4040 e809 2500 0000 416b 6169  ....@@..%...Akai
+00000050: 2050 726f 6665 7373 696f 6e61 6c20 466f   Professional Fo
+00000060: 7263 6520 7570 6772 6164 6520 696d 6167  rce upgrade imag
+00000070: 6500 0000 0000 0000 5041 5254 4c00 0000  e.......PARTL...
+00000080: 1431 1e0b 0000 0000 0600 0000 726f 6f74  .1..........root
+00000090: 6673 0000 0200 0000 787a 0000 0100 0000  fs......xz......
+000000a0: 0400 0000 7368 6131 0000 0000 1400 0000  ....sha1........
+000000b0: 693f f81c 8fd3 6eb1 f9de 5ed2 8570 3436  i?....n...^..p46
+000000c0: fe41 c2bc fd37 7a58 5a00 0001 6922 de36  .A...7zXZ...i".6
+000000d0: 04c0 95cf c505 8080 800c 2101 1600 0000  ..........!.....
+000000e0: bc42 7ace f96d 7cef fe5d 0000 6ffd ffff  .Bz..m|..]..o...
+000000f0: a3b7 7f9a 9e8e d01e 4695 b63b 4b11 4ce0  ........F..;K.L.
+00000100: 446a 5229 07c3 705f 445c 5493 337b 1d8e  DjR)..p_D\T.3{..
+00000110: 6fbe dc20 4526 6964 5b69 c196 84fb 045a  o.. E&id[i.....Z
+00000120: 98dd fa3e c0f3 45c0 6aef 4112 c033 07bd  ...>..E.j.A..3..
+00000130: f02a 7238 3e5d fbe7 abae 294f 940f 359b  .*r8>]....)O..5.
+00000140: cecc 445d 6c66 58f4 eb4b fa07 a6e2 2fc0  ..D]lfX..K..../.
+00000150: 0a7d 7537 cfb3 f400 1496 e6ce e418 c818  .}u7............
+00000160: baa9 367a 8a21 8ff7 3ec6 e36b 8b57 eb63  ..6z.!..>..k.W.c
+00000170: d0b8 ed61 a89b d549 722c 23fe 9e0f a3f2  ...a...Ir,#.....
+00000180: a7b1 ff08 0dad 2a18 6c9a 0712 52bd 2212  ......*.l...R.".
+00000190: fd6a e638 ed15 5ae0 c2a3 3b62 4a81 ddae  .j.8..Z...;bJ...
+000001a0: cb73 474d 28a2 f56e 8018 a17c e4ee 6451  .sGM(..n...|..dQ
+000001b0: ad33 f7f3 aea9 492e 471d 7ebd 6708 7f8d  .3....I.G.~.g...
+000001c0: 2eed 476e 6bb8 38ad d45b 7173 b9c3 8b4a  ..Gnk.8..[qs...J
+000001d0: f9dc 7aab 8b60 61b1 5cd6 f7fe c8da 67d1  ..z..`a.\.....g.
+000001e0: 15a1 d1b9 6d9c bfd2 4f32 98c6 f068 2773  ....m...O2...h's
+000001f0: d5b5 55df 2ef7 e8e8 016e ad0e 2c23 bb9d  ..U......n..,#..
+00000200: 64ef de5e 2cb7 ef5f eddc fa7c 31c3 d71b  d..^,.._...|1...
+00000210: 3ba1 f6dc c69e 4c82 3d44 f02a 16d2 daa4  ;.....L.=D.*....
+00000220: 4048 a3d5 736a 90f9 2b99 e628 f6cd 31cf  @H..sj..+..(..1.
+00000230: 686c 1810 fb4b b1b1 c646 525a 2875 8464  hl...K...FRZ(u.d
+00000240: 2637 be0b 1476 b33b fa17 b67f 9909 1a92  &7...v.;........
+00000250: 828e eb61 e1f3 50fa 1258 84bb 8d72 4cb8  ...a..P..X...rL.
+00000260: a99c 125d 0c4e cb9c cd09 dfe2 3b8b 981f  ...].N......;...
+00000270: 6ffa 6a67 832d 11e4 8d29 890b 12bd 3ff0  o.jg.-...)....?.
+00000280: 6738 3621 c550 0d9f fa1f 6a3e 6b07 69f2  g86!.P....j>k.i.
+00000290: f5b7 9847 1679 e20d b199 ea54 a41b 2147  ...G.y.....T..!G
+000002a0: 2629 8cab ed9d 3558 56bf afbb 5987 287c  &)....5XV...Y.(|
+000002b0: fa8d a013 aa74 8d29 59ba 6475 0bf7 bb12  .....t.)Y.du....
+000002c0: b068 2765 7f77 b42f 77b6 a3ee 2880 3257  .h'e.w./w...(.2W
+000002d0: ba34 e0af 5ce1 621d bc26 658c 2765 9a50  .4..\.b..&e.'e.P
+000002e0: 4e85 fe56 4bf0 202c 0e85 9627 8939 ab0e  N..VK. ,...'.9..
+000002f0: 2258 c845 c7c4 90f8 e0fc 3c3c 9280 ad27  "X.E......<<...'
+00000300: befc 086f f1e4 252e 1fb4 a4a4 ff29 cd88  ...o..%......)..
+00000310: f888 4fc6 8307 385c 23f2 a2b7 c0a2 de60  ..O...8\#......`
+00000320: cd38 13bd 9fd1 8417 e3e4 02e8 cd65 5de5  .8...........e].
+00000330: 1447 c6d1 cf54 7bb1 dece cf04 17a0 b1e9  .G...T{.........
+00000340: f0e9 b1de 6f27 7250 9dac f61e 62bc 3e4b  ....o'rP....b.>K
+00000350: baa5 8127 7968 31eb bee2 eb1b 62e0 f0b4  ...'yh1.....b...
+00000360: 1e6a 262c 09e0 1d6e dc6b 8efd b378 8118  .j&,...n.k...x..
+00000370: 9ba7 4961 e0c7 9119 846e 54f4 d019 21b3  ..Ia.....nT...!.
+00000380: f87b 6da2 969b 7422 5c48 bba5 7964 6aaf  .{m...t"\H..ydj.
+00000390: 559c 4729 6e54 687c 473c a9b6 cf85 cf17  U.G)nTh|G<......
+000003a0: 7f49 c480 828a a634 4a4d de18 1967 63de  .I.....4JM...gc.
+000003b0: 5930 d8ae 2d96 2f71 0c4e afa3 0ae9 cabe  Y0..-./q.N......
+000003c0: 0ba1 6868 2d94 dd6d a86a 247f e5fe c30a  ..hh-..m.j$.....
+000003d0: baab ff28 0785 5bde 4e96 b603 e65d b518  ...(..[.N....]..
+000003e0: 6206 e8e9 f1d0 b821 c2c6 5376 c98d 9910  b......!..Sv....
+000003f0: 6e91 73bc 771a dfc5 71cc 1f9c 38d8 d0aa  n.s.w...q...8...
+
+xxd: last 256 bytes
+-------------------
+0b1e30e8: c170 4d47 0cd1 9111 aaad 601d bace b127  .pMG......`....'
+0b1e30f8: 185c 5986 e966 5258 bee9 76ac 59e4 e55b  .\Y..fRX..v.Y..[
+0b1e3108: 0508 f9c7 daad fcfb 522b 74cd 1e5b 2042  ........R+t..[ B
+0b1e3118: f9dd 533d f829 6409 3b80 cb2a 6cdf 849a  ..S=.)d.;..*l...
+0b1e3128: 8123 0000 92fe 3742 0013 adcf c505 8080  .#....7B........
+0b1e3138: 800c a496 d002 8080 800c 8a9b ee02 8080  ................
+0b1e3148: 800c b2fc f502 8080 800c cff8 da05 8080  ................
+0b1e3158: 800c a3f3 a304 8080 800c a7f3 a103 8080  ................
+0b1e3168: 800c 85a9 ba03 8080 800c e4c4 8d03 8080  ................
+0b1e3178: 800c cbb0 de01 8080 800c a497 b103 8080  ................
+0b1e3188: 800c f0bd aa0a 8080 800c 97f6 ec08 8080  ................
+0b1e3198: 800c b8e0 d50a 8080 800c eaaa c40a 8080  ................
+0b1e31a8: 800c 8ae8 d405 8080 800c e9ff ff01 8080  ................
+0b1e31b8: 800c 9a8f 8002 8080 800c 9418 8080 ea09  ................
+0b1e31c8: 5710 3998 1e77 3017 2600 0000 0001 595a  W.9..w0.&.....YZ
+0b1e31d8: 454f 4600 1000 0000 0000 0000 0000 0000  EOF.............

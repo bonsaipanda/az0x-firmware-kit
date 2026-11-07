@@ -1,0 +1,9 @@
+# Applied on top of gen1/common/linux.config (the stock Force 3.10 kernel
+# config, taken from /proc/config.gz).
+
+# Show boot messages and the app's console output on the screen.
+CONFIG_FRAMEBUFFER_CONSOLE=y
+CONFIG_FRAMEBUFFER_CONSOLE_ROTATION=y
+
+# Keep the build independent of the stock toolchain.
+CONFIG_LOCALVERSION="-az0x-kit"

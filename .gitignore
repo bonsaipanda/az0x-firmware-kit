@@ -1,0 +1,6 @@
+/.buildroot/
+/output/
+/dl/
+__pycache__/
+*.img
+*.ext4
