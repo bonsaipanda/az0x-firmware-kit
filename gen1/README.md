@@ -8,11 +8,33 @@ ARM), eMMC storage and the same boot chain. See
 | Folder | Device | Device tree compatible | Tested |
 |---|---|---|---|
 | [force](force) | Akai Force | `inmusic,ada2` | not yet |
-| [mpc-live](mpc-live) | MPC Live | `inmusic,acv5`? | not yet |
+| [mpc-live](mpc-live) | MPC Live | `inmusic,acv5` (probably) | not yet |
 
-Each gen1 MPC model has its own device tree, so each gets its own folder.
-The official MPC update image accepts these compatibles: acv5, acv8, acva,
-acva2, acvb, acvm, acvr, acv5s. Which model is which isn't confirmed yet.
+Each device has its own device tree (most have a plain and a `-c` variant
+for RK3288 vs RK3288-C boards), so each gets its own folder.
+
+## Device trees in inMusic's kernel (6.18.44, mpc-g1/3.10)
+
+Akai devices, from `arch/arm/boot/dts/rockchip/`:
+
+| File | Model string | Compatible |
+|---|---|---|
+| rk3288-az01-ada2(-c) | Akai Professional Force | `inmusic,ada2` |
+| rk3288-az01-mpc-acv5(-c) | InMusic MPC ACV5 | `inmusic,acv5` |
+| rk3288-az01-mpc-acv8(-c) | InMusic MPC ACV8 | `inmusic,acv8` |
+| rk3288-az01-acv5s | MPC X SE | `inmusic,acv5s` |
+| rk3288-az01-acva(-c) | MPC One | `inmusic,acva` |
+| rk3288-az01-acvb(-c) | MPC Live Mk 2 | `inmusic,acvb` |
+| rk3288-az01-acvm(-c) | MPC Key 61 | `inmusic,acvm` |
+| rk3288-az05-acva2 | MPC One+ | `inmusic,acva2` |
+| rk3288-az05-acvm | MPC Key 61 | `inmusic,acvm` |
+| rk3288-az05-acvr | MPC Key 37 | `inmusic,acvr` |
+
+By elimination, acv5 is most likely the original MPC Live and acv8 the
+MPC X. Nothing in the kernel confirms that yet.
+
+The same kernel also carries device trees for other inMusic RK3288
+products (Denon Prime / SC series, HeadRush, Alesis, Numark Mixstream).
 
 ## What's shared
 
