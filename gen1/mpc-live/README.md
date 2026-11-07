@@ -6,8 +6,9 @@ be trusted. See [reference/](reference).
 
 What's guessed:
 
-- Device tree: `rockchip/rk3288-az01-acv5` (from the compatibles in the
-  official MPC update image; not confirmed which one is the Live)
+- Device tree: `rockchip/rk3288-az01-mpc-acv5` and `-mpc-acv5-c` (the
+  kernel files for compatible `inmusic,acv5`, model "InMusic MPC ACV5";
+  not confirmed which one is the Live)
 - DT compatible written into the update image: `inmusic,acv5`
 
 What's known from the official MPC gen1 3.10 image: one image covers all
