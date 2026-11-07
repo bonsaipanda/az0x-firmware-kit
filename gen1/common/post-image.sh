@@ -24,17 +24,25 @@ for id in "$@"; do
 	usb_args="$usb_args --usb-id $id"
 done
 
+# Use the build machine's python3, not Buildroot's host-python3: Buildroot
+# puts $HOST_DIR/bin first in PATH, and its host-python3 is built without
+# the lzma module that az0x_img.py needs.
+PYTHON=$(PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v "^${HOST_DIR:-/nonexistent}/" | paste -sd: -) command -v python3) || {
+	echo "post-image: no python3 outside $HOST_DIR"
+	exit 1
+}
+
 VERSION="az0x-kit-$(git -C "$BR2_EXTERNAL_AZ0X_PATH" describe --always --dirty 2>/dev/null || echo unknown)"
 
 # shellcheck disable=SC2086
-python3 -I "$BR2_EXTERNAL_AZ0X_PATH/tools/az0x_img.py" pack \
+"$PYTHON" -I "$BR2_EXTERNAL_AZ0X_PATH/tools/az0x_img.py" pack \
 	"$IMAGES/$DEVICE-update.img" \
 	--version "$VERSION" \
 	--compatible "$COMPAT" $usb_args \
 	--description "az0x-firmware-kit image for $DEVICE (unofficial)" \
 	--part "rootfs=$ROOTFS"
 
-python3 -I "$BR2_EXTERNAL_AZ0X_PATH/tools/az0x_img.py" verify "$IMAGES/$DEVICE-update.img"
+"$PYTHON" -I "$BR2_EXTERNAL_AZ0X_PATH/tools/az0x_img.py" verify "$IMAGES/$DEVICE-update.img"
 
 echo
 echo "Images in $IMAGES:"
