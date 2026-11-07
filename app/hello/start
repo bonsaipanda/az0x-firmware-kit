@@ -1,0 +1,3 @@
+#!/bin/sh
+# Called by init at boot (and again if it exits). Replace with your app.
+exec /opt/app/hello

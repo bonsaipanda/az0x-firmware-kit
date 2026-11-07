@@ -1,0 +1,22 @@
+config BR2_PACKAGE_AZ0X_APP
+	bool "az0x-app (the application the device boots into)"
+	default y
+	help
+	  Installs one application into /opt/app. At boot, init runs
+	  /opt/app/start and restarts it if it exits.
+
+	  The application is a local source directory with a Makefile
+	  that supports "make" and "make install DESTDIR=...", and that
+	  installs an executable /opt/app/start. The kit ships a small
+	  example in app/hello.
+
+if BR2_PACKAGE_AZ0X_APP
+
+config BR2_PACKAGE_AZ0X_APP_SOURCE_DIR
+	string "application source directory"
+	default "$(BR2_EXTERNAL_AZ0X_PATH)/app/hello"
+	help
+	  Path to the application sources. Point this at your own
+	  application to build a firmware for it.
+
+endif

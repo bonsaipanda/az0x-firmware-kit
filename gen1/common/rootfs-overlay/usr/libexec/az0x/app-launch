@@ -1,0 +1,31 @@
+#!/bin/sh
+# Runs the firmware's one application. init respawns this script, so a
+# crashing app comes back. After 5 fast crashes in a row it waits 30 s
+# before trying again, so a broken app can't spin the CPU.
+
+APP=/opt/app/start
+STATE=/run/az0x-app-crashes
+
+if [ ! -x "$APP" ]; then
+	echo "az0x: no application installed at $APP"
+	exec sleep 3600
+fi
+
+n=$(cat "$STATE" 2>/dev/null || echo 0)
+if [ "$n" -ge 5 ]; then
+	echo "az0x: $APP keeps exiting; waiting 30 s"
+	sleep 30
+	n=0
+fi
+
+start=$(cut -d. -f1 /proc/uptime)
+"$APP"
+code=$?
+end=$(cut -d. -f1 /proc/uptime)
+logger -t az0x "app exited with $code after $((end - start)) s"
+
+if [ $((end - start)) -lt 10 ]; then
+	echo $((n + 1)) > "$STATE"
+else
+	echo 0 > "$STATE"
+fi
