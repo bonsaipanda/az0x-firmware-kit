@@ -1,0 +1,113 @@
+## sfdisk -d /dev/mmcblk0
+sh: sfdisk: not found
+(sfdisk not available)
+
+## cat /proc/partitions
+major minor  #blocks  name
+
+   1        0      16384 ram0
+ 179        0    7636800 mmcblk0
+ 179        1         64 mmcblk0p1
+ 179        2          8 mmcblk0p2
+ 179        3        384 mmcblk0p3
+ 179        4       4096 mmcblk0p4
+ 179        5       4096 mmcblk0p5
+ 179        6     512000 mmcblk0p6
+ 179        7    1048576 mmcblk0p7
+ 179        8    6067503 mmcblk0p8
+ 179       32       4096 mmcblk0boot0
+ 179       64       4096 mmcblk0boot1
+ 179       96  493895680 mmcblk1
+ 179       97  493894656 mmcblk1p1
+
+## lsblk
+NAME                 SIZE TYPE FSTYPE LABEL         PARTLABEL      PARTUUID                             UUID                                 MOUNTPOINT
+mmcblk0        7820083200 disk                                                                                                               
+|-mmcblk0p1         65536 part                      uboot-spl      3c7a21f6-7d1c-6949-8f05-88c0b9c0f0e6                                      
+|-mmcblk0p2          8192 part                      env            8f868bbe-d889-f84f-a64d-d077e73b4f09                                      
+|-mmcblk0p3        393216 part                      uboot          92e71b46-293b-0a4c-a6a2-3460c0119cbe                                      
+|-mmcblk0p4       4194304 part                      splash         cda9bf40-2c6d-224e-a662-f0a803794462                                      
+|-mmcblk0p5       4194304 part                      recoverysplash e2b850e0-92ee-ca43-98ad-9aa4fbca8616                                      
+|-mmcblk0p6     524288000 part ext4                 rootfs         24d1deac-3434-1a4e-98d1-68ee2945a5f1 23dcb74a-13f4-41c2-b42d-3de162ba0c5e /
+|-mmcblk0p7    1073741824 part ext4   acvs-synths   synths         25c774f7-1b5e-ba46-9a61-ab2c2b6a7fb5 25076994-d712-4c81-a86e-0dfcd6efd028 /media/acvs-synths
+`-mmcblk0p8    6213123584 part ext4   az01-internal data           931ad49d-ad59-0849-833a-9bf00af5b60e 896c1991-ce48-4894-bdb5-b0b381a1c459 /media/az01-internal
+mmcblk0boot0      4194304 disk                                                                                                               
+mmcblk0boot1      4194304 disk                                                                                                               
+mmcblk1      505749176320 disk                                                                                                               
+`-mmcblk1p1  505748127744 part ext4                                06cd4647-01                          0d60142b-49be-4e0f-9074-037fe3bdb5b0 /media/az01-internal-sd
+
+## blkid
+/dev/mmcblk1p1: UUID="0d60142b-49be-4e0f-9074-037fe3bdb5b0" TYPE="ext4"
+/dev/mmcblk0p8: LABEL="az01-internal" UUID="896c1991-ce48-4894-bdb5-b0b381a1c459" TYPE="ext4"
+/dev/mmcblk0p7: LABEL="acvs-synths" UUID="25076994-d712-4c81-a86e-0dfcd6efd028" TYPE="ext4"
+/dev/mmcblk0p6: UUID="23dcb74a-13f4-41c2-b42d-3de162ba0c5e" TYPE="ext4"
+
+## /sys partition start/size (512-byte sectors)
+mmcblk0p1 start=64 size=128
+mmcblk0p2 start=192 size=16
+mmcblk0p3 start=256 size=768
+mmcblk0p4 start=1024 size=8192
+mmcblk0p5 start=9216 size=8192
+mmcblk0p6 start=17408 size=1024000
+mmcblk0p7 start=1041408 size=2097152
+mmcblk0p8 start=3138560 size=12135007
+
+## mount
+/dev/mmcblk0p6 on / type ext4 (ro,relatime)
+devtmpfs on /dev type devtmpfs (rw,relatime,size=1025908k,nr_inodes=188347,mode=755)
+proc on /proc type proc (rw,relatime)
+sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+securityfs on /sys/kernel/security type securityfs (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /dev/shm type tmpfs (rw,nosuid,nodev)
+devpts on /dev/pts type devpts (rw,relatime,gid=5,mode=620,ptmxmode=666)
+tmpfs on /run type tmpfs (rw,nosuid,nodev,size=413028k,nr_inodes=819200,mode=755)
+cgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot)
+tmpfs on /etc/machine-id type tmpfs (ro,size=413028k,nr_inodes=819200,mode=755)
+debugfs on /sys/kernel/debug type debugfs (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /tmp type tmpfs (rw,nosuid,nodev,size=1032568k,nr_inodes=1048576)
+fusectl on /sys/fs/fuse/connections type fusectl (rw,nosuid,nodev,noexec,relatime)
+configfs on /sys/kernel/config type configfs (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /media type tmpfs (rw)
+tmpfs on /secure-media type tmpfs (rw)
+/dev/mmcblk0p7 on /synths type ext4 (ro,relatime)
+/dev/mmcblk0p7 on /media/acvs-synths type ext4 (ro,relatime)
+/dev/mmcblk0p8 on /data type ext4 (rw,relatime)
+/dev/mmcblk0p8 on /media/az01-internal type ext4 (rw,relatime)
+overlay on /etc type overlay (rw,relatime,lowerdir=/etc,upperdir=/data/system/etc/overlay,workdir=/data/system/etc/.work,uuid=null)
+overlay on /var type overlay (rw,relatime,lowerdir=/var,upperdir=/data/system/var/overlay,workdir=/data/system/var/.work,uuid=null)
+tmpfs on /var/volatile type tmpfs (rw,relatime)
+overlay on /srv type overlay (rw,relatime,lowerdir=/srv,upperdir=/var/volatile/srv,workdir=/var/volatile/.srv-work,uuid=on)
+/dev/mmcblk1p1 on /sdcard type ext4 (rw,relatime)
+/dev/mmcblk1p1 on /media/az01-internal-sd type ext4 (rw,relatime)
+
+## /etc/fstab
+# stock fstab - you probably want to override this with a machine specific one
+
+/dev/root            /                    auto       ro              1  0
+proc                 /proc                proc       defaults              0  0
+devpts               /dev/pts             devpts     mode=0620,ptmxmode=0666,gid=5      0  0
+tmpfs                /run                 tmpfs      mode=0755,nodev,nosuid,strictatime 0  0
+tmpfs                /var/volatile        tmpfs      defaults              0  0
+
+# uncomment this if your device has a SD/MMC/Transflash slot
+#/dev/mmcblk0p1       /media/card          auto       defaults,sync,noauto  0  0
+
+
+## /proc/cmdline
+root=PARTUUID=24d1deac-3434-1a4e-98d1-68ee2945a5f1 rootwait ro console=ttyS2,115200 rfkill.default_state=0 systemd.mask=no-reserved-blocks@dev-mmcblk1p1.service fsck.repair=yes isolcpus=2-3
+
+## Primary GPT decoded on the PC from a read-only copy of the first 4 MiB of mmcblk0 (512-byte sectors)
+signature=b'EFI PART' revision=0x00010000 current_lba=1 backup_lba=15273599 first_usable=34 last_usable=15273566
+disk_guid=02bebde5-b5a4-48cd-b262-512fe8b6ae06 entries_lba=2 num_entries=128 entry_size=128
+
+p1: start=64 end=191 size=128 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=3c7a21f6-7d1c-6949-8f05-88c0b9c0f0e6 attrs=0x0 name=uboot-spl
+p2: start=192 end=207 size=16 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=8f868bbe-d889-f84f-a64d-d077e73b4f09 attrs=0x0 name=env
+p3: start=256 end=1023 size=768 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=92e71b46-293b-0a4c-a6a2-3460c0119cbe attrs=0x0 name=uboot
+p4: start=1024 end=9215 size=8192 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=cda9bf40-2c6d-224e-a662-f0a803794462 attrs=0x0 name=splash
+p5: start=9216 end=17407 size=8192 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=e2b850e0-92ee-ca43-98ad-9aa4fbca8616 attrs=0x0 name=recoverysplash
+p6: start=17408 end=1041407 size=1024000 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=24d1deac-3434-1a4e-98d1-68ee2945a5f1 attrs=0x4 name=rootfs
+p7: start=1041408 end=3138559 size=2097152 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=25c774f7-1b5e-ba46-9a61-ab2c2b6a7fb5 attrs=0x0 name=synths
+p8: start=3138560 end=15273566 size=12135007 type=ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 uuid=931ad49d-ad59-0849-833a-9bf00af5b60e attrs=0x0 name=data
+
+## Note: the U-Boot env 'partitions' string lists UUIDs whose first three groups are byte-swapped relative to the on-disk GPT
+## (e.g. env rootfs uuid=acded124-3434-4e1a-... vs GPT/PARTUUID 24d1deac-3434-1a4e-...). The kernel cmdline uses the on-disk form.
