@@ -10,7 +10,7 @@
 | What | Status |
 |---|---|
 | Buildroot config | done; `make defconfig` passes |
-| Full build | not yet run |
+| Full build | works (2026-11-07): rootfs uses ~80 MiB, update image 14 MiB |
 | Boots on hardware | not tested |
 | Display, touch | not tested |
 | Pads/knobs/audio (internal USB) | not tested |
