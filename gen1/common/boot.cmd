@@ -27,11 +27,11 @@ fi
 # go to the serial port and /data/az0x/logs.
 #
 # Verbose boot for development: create /data/az0x/verbose-boot (gen1 keeps
-# /data on partition 8). console=tty0 (last, so it becomes /dev/console)
+# /data on partition 8), or build with AZ0X_VERBOSE_BOOT=1. console=tty0 (last, so it becomes /dev/console)
 # then shows kernel and init messages on the screen too; fbcon=rotate:3
 # turns the text upright on the portrait panels.
 setenv bootargs "${bootargs} fsck.repair=yes fbcon=rotate:3"
-if test -e ${devtype} ${devnum}:8 /az0x/verbose-boot
+if test "${az0x_verbose}" = "1" || test -e ${devtype} ${devnum}:8 /az0x/verbose-boot
 then
 	setenv bootargs "${bootargs} console=tty0 loglevel=7"
 else

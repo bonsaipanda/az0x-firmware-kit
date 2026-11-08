@@ -9,8 +9,15 @@ DEVICE=$2
 COMMON=$(dirname "$0")
 
 # Boot script: U-Boot looks for /boot/boot.scr.uimg on the rootfs.
+# AZ0X_VERBOSE_BOOT=1 makes every boot verbose (screen console), for a first
+# test on a device whose /data can't hold the verbose-boot file yet.
+BOOTCMD=$COMMON/boot.cmd
+if [ "${AZ0X_VERBOSE_BOOT:-0}" = 1 ]; then
+	BOOTCMD=$(mktemp)
+	{ echo "setenv az0x_verbose 1"; cat "$COMMON/boot.cmd"; } > "$BOOTCMD"
+fi
 "$HOST_DIR/bin/mkimage" -A arm -O linux -T script -C none -n "az0x-kit" \
-	-d "$COMMON/boot.cmd" "$TARGET_DIR/boot/boot.scr.uimg"
+	-d "$BOOTCMD" "$TARGET_DIR/boot/boot.scr.uimg"
 
 test -f "$TARGET_DIR/boot/zImage" || { echo "post-build: /boot/zImage missing"; exit 1; }
 ls "$TARGET_DIR"/boot/*.dtb >/dev/null 2>&1 || { echo "post-build: no device trees in /boot"; exit 1; }
