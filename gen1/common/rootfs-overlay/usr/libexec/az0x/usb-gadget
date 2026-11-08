@@ -43,6 +43,17 @@ ln -s functions/ecm.usb0 configs/c.1/
 
 echo "$UDC" > UDC || { echo "az0x: could not enable USB gadget"; exit 0; }
 
+# Some devices (the Force) route the rear USB port through a switch. Its
+# default, "internal", wires the port to the device's own hub (pads,
+# controls), so the gadget never reaches the computer. "external" sends the
+# port to the computer instead, but then the app probably loses the pads.
+# So this is opt-in: create /data/az0x/usb-to-computer to switch at boot,
+# or run "echo external > /sys/devices/platform/usb-mux/state" by hand.
+MUX=/sys/devices/platform/usb-mux/state
+if [ -w "$MUX" ] && [ -e /data/az0x/usb-to-computer ]; then
+	echo external > "$MUX" || echo "az0x: could not switch USB port"
+fi
+
 ip addr add 10.55.0.1/24 dev usb0 2>/dev/null
 ip link set usb0 up 2>/dev/null
 cat > /run/udhcpd.usb0.conf <<EOF
