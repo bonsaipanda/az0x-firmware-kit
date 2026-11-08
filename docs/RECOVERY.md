@@ -18,8 +18,11 @@
 
 1. Power the device off.
 2. Hold the recovery button combination while powering on. U-Boot then
-   starts fastboot over USB. **The exact button combination for each device
-   still needs to be confirmed and written here.**
+   starts fastboot over USB.
+   - **Force:** hold **MATRIX + LOAD + SAVE** while powering on (from the
+     owner's notes; not yet confirmed to give fastboot and not inMusic's own
+     USB update mode).
+   - Other devices: not known yet.
 3. Connect the device's USB port to your PC. `fastboot devices` should list
    it.
 4. Run `tools/flash-fastboot.sh output/<device>/images/rootfs.ext4`.
