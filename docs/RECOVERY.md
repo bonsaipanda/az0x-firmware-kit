@@ -19,9 +19,8 @@
 1. Power the device off.
 2. Hold the recovery button combination while powering on. U-Boot then
    starts fastboot over USB.
-   - **Force:** hold **MATRIX + LOAD + SAVE** while powering on (from the
-     owner's notes; not yet confirmed to give fastboot and not inMusic's own
-     USB update mode).
+   - **Force:** not known yet. **MATRIX + LOAD + SAVE** at power-on starts
+     inMusic's own *Update Mode* instead (see below), not fastboot.
    - Other devices: not known yet.
 3. Connect the device's USB port to your PC. `fastboot devices` should list
    it.
@@ -39,6 +38,14 @@ Flash the stock rootfs the same way. Get it from the official update image:
 tools/az0x_img.py unpack Force-3.10.0-update.img stock/
 tools/flash-fastboot.sh stock/rootfs.img
 ```
+
+## Update Mode (official way back)
+
+Holding **MATRIX + LOAD + SAVE** while powering on a Force starts inMusic's
+Update Mode: the device waits on its USB-B port for the official Akai
+updater app (Windows/macOS) to send it a firmware image. Running the
+official updater for your device restores stock firmware, as long as the
+bootloader is intact. The kit never writes the bootloader.
 
 ## If it doesn't boot
 
