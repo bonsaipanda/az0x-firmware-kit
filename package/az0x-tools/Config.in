@@ -1,0 +1,7 @@
+config BR2_PACKAGE_AZ0X_TOOLS
+	bool "az0x-tools (device helpers)"
+	default y
+	help
+	  Small helpers for az0x devices. az0x-reboot restarts the
+	  device with a reboot argument; "az0x-reboot loader" restarts
+	  into Update Mode (fastboot).

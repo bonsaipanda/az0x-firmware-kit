@@ -24,6 +24,10 @@
      with an "Android Fastboot" interface. This is the same mode inMusic's
      updater app uses ("Update Mode").
    - Other devices: not known yet.
+   - From a running kit firmware (SSH or console): `az0x-reboot loader`
+     restarts straight into Update Mode, no buttons needed. It uses the
+     same reboot argument as stock's "Switch to Update Mode"; nothing is
+     written to disk, and the boot after that is normal again.
 3. Connect the device's USB port to your PC. `fastboot devices` should list
    it.
 4. Run `tools/flash-fastboot.sh output/<device>/images/rootfs.ext4`.

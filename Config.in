@@ -1,3 +1,4 @@
 menu "az0x firmware kit"
 source "$BR2_EXTERNAL_AZ0X_PATH/package/az0x-app/Config.in"
+source "$BR2_EXTERNAL_AZ0X_PATH/package/az0x-tools/Config.in"
 endmenu
