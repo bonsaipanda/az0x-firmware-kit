@@ -4,6 +4,9 @@
 # Show boot messages and the app's console output on the screen.
 CONFIG_FRAMEBUFFER_CONSOLE=y
 CONFIG_FRAMEBUFFER_CONSOLE_ROTATION=y
+# Leave the boot picture alone until text is actually printed on the screen
+# (quiet boot prints none), so there is no black gap before the app.
+CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER=y
 
 # Keep the build independent of the stock toolchain.
 CONFIG_LOCALVERSION="-az0x-kit"
