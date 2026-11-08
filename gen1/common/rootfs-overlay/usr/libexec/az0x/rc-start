@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs the normal start scripts, then tells the app launcher it may start.
+# Run from inittab as "once", so logins on the screen, the serial port and
+# USB come up even if a start script hangs.
+/etc/init.d/rcS
+touch /run/az0x-ready

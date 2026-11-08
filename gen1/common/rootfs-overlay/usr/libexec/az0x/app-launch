@@ -6,6 +6,14 @@
 APP=/opt/app/start
 STATE=/run/az0x-app-crashes
 
+# Wait for the start scripts (rc-start), but not forever.
+n=0
+while [ ! -e /run/az0x-ready ] && [ $n -lt 60 ]; do
+	sleep 1
+	n=$((n + 1))
+done
+[ -e /run/az0x-ready ] || echo "az0x: start scripts still running after 60 s, starting the app anyway"
+
 if [ ! -x "$APP" ]; then
 	echo "az0x: no application installed at $APP"
 	exec sleep 3600

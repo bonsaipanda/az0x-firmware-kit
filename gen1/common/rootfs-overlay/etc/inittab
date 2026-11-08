@@ -5,15 +5,19 @@
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
 ::sysinit:/bin/hostname -F /etc/hostname
-::sysinit:/etc/init.d/rcS
+# USB serial + network to a PC, before anything that could get stuck.
+::sysinit:/usr/libexec/az0x/usb-gadget
 
-# The application. Restarted if it exits; see /usr/libexec/az0x/app-launch.
+# Start scripts run alongside the logins below (not before them), so a
+# stuck script can't lock you out.
+::once:/usr/libexec/az0x/rc-start
+
+# The application. Waits for the start scripts, restarted if it exits.
 tty1::respawn:/usr/libexec/az0x/app-launch
 
-# Serial console (debug UART) for development.
+# Logins: debug UART, USB serial (ttyACM0 on the PC), screen (Alt+F2).
 ttyS2::respawn:/sbin/getty -L ttyS2 115200 vt100
-
-# A login on the screen too (switch with Alt+F2 on a USB keyboard).
+ttyGS0::respawn:/sbin/getty -L ttyGS0 115200 vt100
 tty2::respawn:/sbin/getty 38400 tty2
 
 ::shutdown:/etc/init.d/rcK

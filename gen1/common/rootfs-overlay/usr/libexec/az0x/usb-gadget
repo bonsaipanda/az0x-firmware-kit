@@ -1,0 +1,57 @@
+#!/bin/sh
+# Makes the device's USB port (the one that goes to a computer) show up on
+# the computer as:
+#   - a serial port with a login (Linux: /dev/ttyACM0, 115200), and
+#   - a network card: the device is 10.55.0.1 and hands the computer
+#     10.55.0.2 by DHCP, so "ssh root@10.55.0.1" works.
+# Runs early (from inittab sysinit), before the normal start scripts, so it
+# works even if those get stuck.
+
+G=/sys/kernel/config/usb_gadget/az0x
+
+mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config || exit 0
+[ -d "$G" ] && exit 0
+UDC=$(ls /sys/class/udc 2>/dev/null | head -n1)
+[ -n "$UDC" ] || { echo "az0x: no USB device controller"; exit 0; }
+
+mkdir -p "$G" || exit 0
+cd "$G" || exit 0
+echo 0x1d6b > idVendor   # Linux Foundation
+echo 0x0104 > idProduct  # Multifunction Composite Gadget
+echo 0x0100 > bcdDevice
+echo 0x0200 > bcdUSB
+echo 0xEF > bDeviceClass
+echo 0x02 > bDeviceSubClass
+echo 0x01 > bDeviceProtocol
+mkdir -p strings/0x409
+echo "az0x-firmware-kit" > strings/0x409/manufacturer
+echo "$(hostname) (az0x-firmware-kit)" > strings/0x409/product
+sn=$(cat /proc/device-tree/serial-number 2>/dev/null | tr -d '\0')
+echo "${sn:-az0x}" > strings/0x409/serialnumber
+
+mkdir -p configs/c.1/strings/0x409
+echo "serial + network" > configs/c.1/strings/0x409/configuration
+echo 250 > configs/c.1/MaxPower
+
+mkdir -p functions/acm.usb0
+mkdir -p functions/ecm.usb0
+# Fixed MACs so the computer sees the same network card every time.
+echo 02:a0:0c:00:00:01 > functions/ecm.usb0/dev_addr
+echo 02:a0:0c:00:00:02 > functions/ecm.usb0/host_addr
+ln -s functions/acm.usb0 configs/c.1/
+ln -s functions/ecm.usb0 configs/c.1/
+
+echo "$UDC" > UDC || { echo "az0x: could not enable USB gadget"; exit 0; }
+
+ip addr add 10.55.0.1/24 dev usb0 2>/dev/null
+ip link set usb0 up 2>/dev/null
+cat > /run/udhcpd.usb0.conf <<EOF
+start 10.55.0.2
+end 10.55.0.2
+interface usb0
+lease_file /run/udhcpd.usb0.leases
+option subnet 255.255.255.0
+EOF
+touch /run/udhcpd.usb0.leases
+udhcpd -S /run/udhcpd.usb0.conf </dev/null >/dev/null 2>&1
+exit 0
