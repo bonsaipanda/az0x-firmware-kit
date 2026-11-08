@@ -4,6 +4,8 @@
 # app draws. gen1 splash partitions hold a raw picture in the panel's own
 # format (Force: 800x1280, 4 bytes per pixel).
 grep -qw quiet /proc/cmdline || exit 0
+# Runs before fstab is mounted.
+[ -d /sys/class ] || mount -t sysfs sysfs /sys
 [ -e /dev/fb0 ] || exit 0
 for u in /sys/class/block/*/uevent; do
 	grep -qx PARTNAME=splash "$u" || continue
