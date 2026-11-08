@@ -1,0 +1,88 @@
+#!/bin/sh
+# az0x-update: install an AZ01 update image (kit or stock) on this device.
+#
+#   az0x-update --check IMAGE   check the image only, change nothing
+#   az0x-update IMAGE           check it, then restart into a small RAM
+#                               system that writes the new rootfs and
+#                               restarts into it
+#
+# Only the partition the system booted from (rootfs) is written. U-Boot, its
+# settings and /data are never touched, so if anything goes wrong, Update
+# Mode (MATRIX + LOAD + SAVE on the Force, or "az0x-reboot loader") still
+# works and a computer can reflash the device.
+#
+# Progress goes to the screen console and /data/az0x/logs/update.log.
+
+set -e
+STAGE=/run/az0x-update
+LIBEXEC=/usr/libexec/az0x
+
+die() { echo "az0x-update: $*" >&2; exit 1; }
+
+CHECK=0
+[ "$1" = "--check" ] && { CHECK=1; shift; }
+[ $# -eq 1 ] || die "usage: az0x-update [--check] IMAGE"
+IMG=$(realpath "$1") || die "$1: not found"
+[ -f "$IMG" ] || die "$IMG: not a file"
+
+# 1. The image: format, device, checksum.
+az0x-img info "$IMG" >/dev/null || exit 1
+az0x-img compat "$IMG" || die "this image is for another device"
+eval "$(az0x-img shell "$IMG" rootfs)" || die "the image has no rootfs"
+case "$COMP" in xz|none) ;; *) die "unsupported compression '$COMP'" ;; esac
+[ -n "$SHA1" ] || die "the image has no SHA-1 for rootfs"
+echo "Checking $IMG ..."
+SUM=$(tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | sha1sum | cut -d' ' -f1)
+[ "$SUM" = "$SHA1" ] || die "checksum mismatch: the file is damaged"
+
+# 2. Where to write: the partition the running system booted from.
+ROOTDEV=$(awk '$5 == "/" { print $3; exit }' /proc/self/mountinfo)
+TARGET=$(sed -n 's/^DEVNAME=//p' "/sys/dev/block/$ROOTDEV/uevent")
+PARTNAME=$(sed -n 's/^PARTNAME=//p' "/sys/dev/block/$ROOTDEV/uevent")
+[ -n "$TARGET" ] || die "can't find the system partition"
+[ "$PARTNAME" = rootfs ] || die "system partition is '$PARTNAME', expected 'rootfs'"
+PARTSIZE=$(( $(cat "/sys/dev/block/$ROOTDEV/size") * 512 ))
+
+# 3. Where the image lives, so the RAM system can mount it again.
+SRCDEV=$(df -P "$IMG" | awk 'NR == 2 { print $1 }')
+SRCMNT=$(df -P "$IMG" | awk 'NR == 2 { print $6 }')
+case "$SRCDEV" in /dev/*) ;; *) die "the image must be on a disk (USB stick, SD card or /data), not on $SRCDEV" ;; esac
+[ "$SRCDEV" != "/dev/$TARGET" ] || die "the image can't be on the system partition"
+SRCPATH=${IMG#"$SRCMNT"}
+DATADEV=$(awk '$2 == "/data" { print $1; exit }' /proc/mounts)
+
+az0x-img info "$IMG"
+echo "OK: will write rootfs to /dev/$TARGET ($PARTSIZE bytes)"
+[ "$CHECK" = 1 ] && exit 0
+
+# 4. Build the RAM system: busybox, its libraries, az0x-reboot.
+rm -rf "$STAGE"
+mkdir -p "$STAGE/bin" "$STAGE/proc" "$STAGE/sys" "$STAGE/dev" "$STAGE/src" "$STAGE/data"
+for f in /bin/busybox /usr/sbin/az0x-reboot; do
+	cp "$f" "$STAGE/bin/"
+	/lib/ld-linux-armhf.so.3 --list "$f" | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^\//) print $i }' |
+	while read -r lib; do
+		mkdir -p "$STAGE$(dirname "$lib")"
+		cp -L "$lib" "$STAGE$lib"
+	done
+done
+for a in $(/bin/busybox --list); do
+	[ -e "$STAGE/bin/$a" ] || ln -s busybox "$STAGE/bin/$a"
+done
+cp "$LIBEXEC/update-stage2" "$STAGE/stage2"
+cat > "$STAGE/update.conf" <<CONF
+TARGET='$TARGET'
+SRCDEV='$SRCDEV'
+SRCPATH='$SRCPATH'
+DATADEV='$DATADEV'
+OFF=$OFF
+LEN=$LEN
+COMP='$COMP'
+SHA1='$SHA1'
+CONF
+
+# 5. Hand over: init stops everything and runs /usr/libexec/az0x/restart,
+# which switches into the RAM system.
+echo "Restarting into the updater. Do not switch off the device."
+sync
+kill -QUIT 1

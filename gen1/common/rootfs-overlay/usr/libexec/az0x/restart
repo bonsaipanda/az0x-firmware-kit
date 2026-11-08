@@ -1,0 +1,8 @@
+#!/bin/sh
+# BusyBox init runs this (inittab "restart" action, on SIGQUIT) after
+# stopping every other process. az0x-update uses it to switch into its RAM
+# system; otherwise this just starts init again.
+if [ -x /run/az0x-update/bin/busybox ] && [ -f /run/az0x-update/stage2 ]; then
+	exec /usr/sbin/chroot /run/az0x-update /bin/sh /stage2
+fi
+exec /sbin/init

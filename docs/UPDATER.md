@@ -1,54 +1,60 @@
-# On-device updates (design, not built yet)
+# On-device updates
 
-Goal: the app (for example a "Firmware" page) lets the user pick another
-firmware image, kit or stock, and the device installs it by itself, without
-a computer.
+> First version, not yet tested on hardware.
 
-## Why it needs a separate mode
+The device can install another firmware image by itself, without a
+computer: a kit build, or a stock image to go back to stock. An app (for
+example a "Firmware" page) only has to call one command.
+
+```sh
+az0x-update --check /media/usb/Force-3.10.0-update.img   # check only
+az0x-update /media/usb/Force-3.10.0-update.img           # install
+```
+
+The image can be on a USB stick, an SD card or `/data`.
+
+## How it works
 
 The running system lives on the `rootfs` partition, so it can't overwrite
-that partition while it runs. Stock solves this by kexec'ing an updater
-ramdisk; the kit can't (LoadPin blocks kexec). U-Boot runs our
-`boot.scr`, though, so the kit lets U-Boot start the updater instead.
+it while it runs. Stock solves this with Akai's own updater (a closed
+program, started with kexec), which the kit can't ship or use. The kit
+does it like this instead:
 
-## Flow
+1. **`az0x-update IMAGE` (normal system)** checks the image: AZ01 v1
+   format, made for this device (device-tree compatible), SHA-1 of the
+   rootfs payload. Then it builds a tiny RAM system in `/run/az0x-update`
+   (BusyBox, its libraries, `az0x-reboot`) and sends init `SIGQUIT`.
+2. **BusyBox init** runs the shutdown steps (services stop, disks become
+   read-only), stops every process, and runs its `restart` action,
+   `/usr/libexec/az0x/restart`. That switches PID 1 into the RAM system
+   (`chroot`), so nothing uses the `rootfs` partition any more.
+3. **The RAM updater** (`/usr/libexec/az0x/update-stage2`) mounts the disk
+   with the image again, checks the SHA-1 again, and streams the payload
+   (`unxz`) onto the partition the system booted from. Progress is shown on
+   the screen and logged to `/data/az0x/logs/update.log`. Then it restarts
+   into the new system.
 
-1. **App stages the update.** It copies the chosen `*-update.img` to
-   `/data/az0x/update/update.img`, checks it (`az0x_img`-style: header,
-   compatible device, SHA-1 of the payload), and creates
-   `/data/az0x/update/pending`. Then it restarts the device normally.
-2. **boot.scr picks updater mode.** If `pending` exists on the data
-   partition, it loads the normal `zImage` and dtb plus
-   `/boot/az0x-updater.cpio.xz` (a small BusyBox initramfs, ~1-2 MiB),
-   and boots with that as the initrd.
-3. **The updater** (`/init` in the initramfs):
-   - shows progress on the screen console;
-   - mounts `/data`, verifies `update.img` again;
-   - unpacks the rootfs payload (xz) straight onto the `rootfs` partition;
-   - reads it back and compares the hash;
-   - removes `pending` (keeps a log in `/data/az0x/logs/update-N.log`);
-   - restarts into the new system.
-4. If the image is bad, it removes `pending`, logs why, and restarts into
-   the unchanged old system.
+If anything fails before writing starts, it restarts into the old system.
+If writing fails halfway, it restarts into Update Mode so a computer can
+reflash the device.
 
-Works the same for stock images (the AZ01 v1 format is the same), so
-"go back to stock" is just picking the stock image.
+## Update Mode from software
+
+`az0x-reboot loader` restarts into the same Update Mode as MATRIX + LOAD +
+SAVE (tested on the Force). An app can offer it as "Restart into Update
+Mode" for people who update from a computer.
 
 ## Safety
 
-- U-Boot, its environment and `/data` are never written.
-- **Power loss during step 3** leaves a half-written rootfs, and
-  `boot.scr` lives on that partition, so the device can't start the
-  updater again by itself. Recovery is Update Mode (MATRIX + LOAD + SAVE)
-  plus `tools/flash-fastboot.sh` or the official updater, as today. The app
-  should refuse to start an update on battery (MPC Live) below a safe
-  level.
-- Fastboot / Update Mode stays reachable from software too:
-  `az0x-reboot loader` (tested on the Force).
+- Only the partition the system booted from is written. U-Boot, its
+  settings and `/data` are never written (except the update log).
+- **Power loss while writing** leaves a half-written system. U-Boot is
+  untouched, so Update Mode (button combo) and a reflash from a computer
+  still work. Apps should not start an update on battery power (MPC Live).
+- Stock images newer than AZ01 v1 (signed) are refused.
 
-## Alternative considered: A/B slots
+## Alternative for later: A/B slots
 
-Writing the new system into a second partition (the 1 GiB `synths`) while
-the old one runs survives power loss better, but takes over a partition
-that stock uses, and needs `boot.scr` slot switching plus a fallback
-counter. It can be added later on top of the same image checks.
+Writing a second system partition while the old one keeps running would
+survive power loss better, but takes over the 1 GiB `synths` partition that
+stock uses. It can be added later on top of the same checks.

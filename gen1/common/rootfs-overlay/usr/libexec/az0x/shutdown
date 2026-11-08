@@ -1,0 +1,13 @@
+#!/bin/sh
+# Shutdown steps (inittab). Normally: stop services, unmount everything.
+# During az0x-update keep /run (the RAM updater lives there) and only make
+# the disks read-only.
+/etc/init.d/rcK
+if [ -f /run/az0x-update/stage2 ]; then
+	sync
+	awk '$1 ~ /^\/dev\// { print $2 }' /proc/mounts | while read -r m; do
+		mount -o remount,ro "$m" 2>/dev/null
+	done
+else
+	umount -a -r
+fi

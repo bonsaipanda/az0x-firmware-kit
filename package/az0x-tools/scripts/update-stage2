@@ -1,0 +1,58 @@
+#!/bin/sh
+# Second half of az0x-update. Runs as PID 1 inside /run/az0x-update (RAM),
+# after init has stopped everything, so the system partition is unused.
+export PATH=/bin
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev
+exec </dev/console >/dev/console 2>&1
+. /update.conf
+
+LOG=/tmp-log
+log() { echo "az0x-update: $*"; echo "$(date) $*" >> $LOG; }
+save_log() {
+	[ -d /data/az0x ] || return 0
+	mkdir -p /data/az0x/logs && cat $LOG >> /data/az0x/logs/update.log
+	sync
+}
+# Nothing written yet: go back to the old system.
+abort() {
+	log "$*"; log "Nothing was changed. Restarting."
+	save_log; sleep 5; reboot -f
+}
+# Half-written system: go to Update Mode so a computer can fix it.
+broken() {
+	log "$*"; log "The system is incomplete. Restarting into Update Mode."
+	save_log; sleep 10; az0x-reboot loader; reboot -f
+}
+
+echo
+log "updating /dev/$TARGET"
+if [ -n "$DATADEV" ]; then
+	mount "$DATADEV" /data || log "can't mount /data (no log will be kept)"
+fi
+if [ "$SRCDEV" = "$DATADEV" ] && mountpoint -q /data; then
+	IMG=/data$SRCPATH
+else
+	mount -o ro "$SRCDEV" /src || abort "can't mount $SRCDEV"
+	IMG=/src$SRCPATH
+fi
+[ -f "$IMG" ] || abort "image $IMG is gone"
+
+log "checking image"
+SUM=$(tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | sha1sum | cut -d' ' -f1)
+[ "$SUM" = "$SHA1" ] || abort "checksum mismatch"
+
+log "writing new system, do not switch off"
+set -o pipefail
+if [ "$COMP" = xz ]; then
+	tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | unxz | dd of=/dev/$TARGET bs=1M conv=fsync
+else
+	tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | dd of=/dev/$TARGET bs=1M conv=fsync
+fi || broken "writing failed"
+sync
+log "done, restarting into the new system"
+save_log
+umount /src /data 2>/dev/null
+sleep 2
+reboot -f
