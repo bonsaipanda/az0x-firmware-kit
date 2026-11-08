@@ -15,8 +15,8 @@
 | Display, touch | console on screen; touchscreen (ILI2116) and buttons show up as inputs |
 | Pads/knobs/audio (internal USB) | ALSA cards "Akai Pro Force" + "ADA2", MIDI ports Force Public/Private/MIDI Port (2026-11-08) |
 | Ethernet + SSH | works (2026-11-08) |
-| Wi-Fi | firmware loads; 0.1.0 never started wpa_supplicant (bad `-s` flag), fixed after 0.1.0. Needs the board's NVRAM file, see below |
-| USB cable to computer | rear port is behind a switch (`/sys/devices/platform/usb-mux/state`); create `/data/az0x/usb-to-computer` to send it to the computer at boot (untested) |
+| Wi-Fi | firmware loads; 0.1.0 never started wpa_supplicant (bad `-s` flag), fixed after 0.1.0; radios also start rfkill-blocked (unblocked in S41 since this fix). Needs the board's NVRAM file, see below |
+| USB cable to computer | works (2026-11-08): create `/data/az0x/usb-to-computer` and the rear port goes to the computer at boot (serial console + `ssh root@10.55.0.1`) |
 
 ## Build
 

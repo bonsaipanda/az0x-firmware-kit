@@ -46,6 +46,11 @@ wifi() {
 		logger -t az0x "no wlan0 (Wi-Fi firmware missing?)"
 		return
 	fi
+	# U-Boot passes rfkill.default_state=0, so every radio starts blocked.
+	for r in /sys/class/rfkill/rfkill*; do
+		[ "$(cat "$r/type" 2>/dev/null)" = wlan ] && echo 0 > "$r/soft"
+	done
+	ip link set wlan0 up
 	wpa_supplicant -B -i wlan0 -c "$STATE/wpa_supplicant.conf" -P /run/wpa_supplicant.pid
 	udhcpc -b -S -i wlan0 -p /run/udhcpc.wlan0.pid -x hostname:"$(hostname)"
 }
