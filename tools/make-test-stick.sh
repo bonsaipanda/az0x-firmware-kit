@@ -34,7 +34,7 @@ read -r answer
 [ "$answer" = yes ] || { echo "Cancelled."; exit 1; }
 
 # One GPT partition, big enough for the image.
-SIZE_MIB=$(( ($(stat -c %s "$IMG") + 1048575) / 1048576 + 8 ))
+SIZE_MIB=$(( ($(stat -L -c %s "$IMG") + 1048575) / 1048576 + 8 ))
 wipefs -a "$DEV" >/dev/null
 printf 'label: gpt\nstart=2048, size=%sMiB, name=az0x-rootfs\n' "$SIZE_MIB" | sfdisk -q "$DEV"
 partprobe "$DEV" 2>/dev/null || true

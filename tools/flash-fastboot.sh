@@ -19,7 +19,7 @@ command -v fastboot >/dev/null || {
 }
 
 MAX=$((500 * 1024 * 1024))
-SIZE=$(stat -c %s "$IMG")
+SIZE=$(stat -L -c %s "$IMG")
 [ "$SIZE" -le "$MAX" ] || { echo "$IMG is larger than the 500 MiB rootfs partition"; exit 1; }
 
 echo "Waiting for a device in fastboot mode..."

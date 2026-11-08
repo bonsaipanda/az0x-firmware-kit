@@ -13,7 +13,7 @@ shift 3
 ROOTFS="$IMAGES/rootfs.ext4"
 # The rootfs partition is 500 MiB on gen1 devices.
 MAX=$((500 * 1024 * 1024))
-SIZE=$(stat -c %s "$ROOTFS")
+SIZE=$(stat -L -c %s "$ROOTFS")
 if [ "$SIZE" -gt "$MAX" ]; then
 	echo "post-image: rootfs.ext4 is $SIZE bytes, the rootfs partition holds $MAX"
 	exit 1
