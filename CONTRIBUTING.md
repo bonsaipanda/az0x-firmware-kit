@@ -20,3 +20,9 @@
   `rootfs`.
 - Keep the kit app-neutral. App-specific things belong in the app's own
   repository.
+
+## Rebuilding local packages
+
+Buildroot copies a local package (`package/az0x-tools`, the app) only on its
+first build. After changing one, rebuild it explicitly, for example
+`make force-az0x-tools-rebuild force` or `make force-az0x-app-rebuild force`.

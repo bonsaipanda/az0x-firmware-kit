@@ -32,7 +32,7 @@ eval "$(az0x-img shell "$IMG" rootfs)" || die "the image has no rootfs"
 case "$COMP" in xz|none) ;; *) die "unsupported compression '$COMP'" ;; esac
 [ -n "$SHA1" ] || die "the image has no SHA-1 for rootfs"
 echo "Checking $IMG ..."
-SUM=$(tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | sha1sum | cut -d' ' -f1)
+SUM=$(az0x-img cat "$IMG" rootfs | sha1sum | cut -d' ' -f1)
 [ "$SUM" = "$SHA1" ] || die "checksum mismatch: the file is damaged"
 
 # 2. Where to write: the partition the running system booted from.
@@ -55,10 +55,10 @@ az0x-img info "$IMG"
 echo "OK: will write rootfs to /dev/$TARGET ($PARTSIZE bytes)"
 [ "$CHECK" = 1 ] && exit 0
 
-# 4. Build the RAM system: busybox, its libraries, az0x-reboot.
+# 4. Build the RAM system: busybox, its libraries, az0x-reboot, az0x-img.
 rm -rf "$STAGE"
 mkdir -p "$STAGE/bin" "$STAGE/proc" "$STAGE/sys" "$STAGE/dev" "$STAGE/src" "$STAGE/data"
-for f in /bin/busybox /usr/sbin/az0x-reboot; do
+for f in /bin/busybox /usr/sbin/az0x-reboot /usr/bin/az0x-img; do
 	cp "$f" "$STAGE/bin/"
 	/lib/ld-linux-armhf.so.3 --list "$f" | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^\//) print $i }' |
 	while read -r lib; do
@@ -75,8 +75,6 @@ TARGET='$TARGET'
 SRCDEV='$SRCDEV'
 SRCPATH='$SRCPATH'
 DATADEV='$DATADEV'
-OFF=$OFF
-LEN=$LEN
 COMP='$COMP'
 SHA1='$SHA1'
 CONF

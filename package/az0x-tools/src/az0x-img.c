@@ -6,9 +6,10 @@
  *                               VERSION= OFF= LEN= COMP= SHA1=
  *   az0x-img compat IMAGE       exit 0 if the image names one of this
  *                               device's device-tree compatibles
+ *   az0x-img cat IMAGE PART     write one partition's payload (still
+ *                               compressed) to stdout
  *
- * Only the headers are read; hashing and unpacking are left to sha1sum,
- * head/tail and unxz. Format: docs/BOOT_CHAIN.md, tools/az0x_img.py.
+ * Hashing and unpacking are left to sha1sum and unxz. Format: docs/BOOT_CHAIN.md, tools/az0x_img.py.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,7 +164,7 @@ int main(int argc, char **argv)
 
 	if (argc < 3) {
 		fprintf(stderr, "usage: az0x-img info|compat IMAGE\n"
-				"       az0x-img shell IMAGE PART\n");
+				"       az0x-img shell|cat IMAGE PART\n");
 		return 2;
 	}
 	if (read_image(argv[2], &img)) {
@@ -194,6 +195,40 @@ int main(int argc, char **argv)
 			printf("OFF=%llu\nLEN=%llu\nCOMP=%s\nSHA1=%s\n",
 			       (unsigned long long)p->off, (unsigned long long)p->len,
 			       p->comp, p->sha1);
+			return 0;
+		}
+		fprintf(stderr, "az0x-img: no partition '%s' in image\n", argv[3]);
+		return 1;
+	}
+	if (!strcmp(argv[1], "cat") && argc > 3) {
+		for (int i = 0; i < img.nparts; i++) {
+			struct part *p = &img.parts[i];
+			if (strcmp(p->name, argv[3]))
+				continue;
+			static char buf[1 << 16];
+			FILE *f = fopen(argv[2], "rb");
+			if (!f || fseeko(f, p->off, SEEK_SET)) {
+				perror("az0x-img");
+				return 1;
+			}
+			for (uint64_t left = p->len; left; ) {
+				size_t want = left < sizeof buf ? left : sizeof buf;
+				size_t got = fread(buf, 1, want, f);
+				if (!got) {
+					fprintf(stderr, "az0x-img: short read\n");
+					return 1;
+				}
+				if (fwrite(buf, 1, got, stdout) != got) {
+					perror("az0x-img: write");
+					return 1;
+				}
+				left -= got;
+			}
+			if (fflush(stdout)) {
+				perror("az0x-img: write");
+				return 1;
+			}
+			fclose(f);
 			return 0;
 		}
 		fprintf(stderr, "az0x-img: no partition '%s' in image\n", argv[3]);

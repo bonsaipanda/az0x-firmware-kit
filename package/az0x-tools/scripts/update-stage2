@@ -29,7 +29,10 @@ broken() {
 echo
 log "updating /dev/$TARGET"
 if [ -n "$DATADEV" ]; then
-	mount "$DATADEV" /data || log "can't mount /data (no log will be kept)"
+	# Shutdown left /data mounted read-only outside this RAM system; a
+	# second mount must match that, then both become writable.
+	{ mount -o ro "$DATADEV" /data && mount -o remount,rw /data; } ||
+		log "can't mount /data (no log will be kept)"
 fi
 if [ "$SRCDEV" = "$DATADEV" ] && mountpoint -q /data; then
 	IMG=/data$SRCPATH
@@ -40,15 +43,15 @@ fi
 [ -f "$IMG" ] || abort "image $IMG is gone"
 
 log "checking image"
-SUM=$(tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | sha1sum | cut -d' ' -f1)
+SUM=$(az0x-img cat "$IMG" rootfs | sha1sum | cut -d' ' -f1)
 [ "$SUM" = "$SHA1" ] || abort "checksum mismatch"
 
 log "writing new system, do not switch off"
 set -o pipefail
 if [ "$COMP" = xz ]; then
-	tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | unxz | dd of=/dev/$TARGET bs=1M conv=fsync
+	az0x-img cat "$IMG" rootfs | unxz | dd of=/dev/$TARGET bs=1M conv=fsync
 else
-	tail -c +$((OFF + 1)) "$IMG" | head -c "$LEN" | dd of=/dev/$TARGET bs=1M conv=fsync
+	az0x-img cat "$IMG" rootfs | dd of=/dev/$TARGET bs=1M conv=fsync
 fi || broken "writing failed"
 sync
 log "done, restarting into the new system"
