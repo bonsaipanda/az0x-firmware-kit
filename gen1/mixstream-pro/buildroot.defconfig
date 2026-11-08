@@ -1,5 +1,4 @@
 # Numark MixStream Pro (gen1 family, "NH08" on board az05, RK3288)
-# DRAFT: not built or tested yet.
 
 # CPU
 BR2_arm=y

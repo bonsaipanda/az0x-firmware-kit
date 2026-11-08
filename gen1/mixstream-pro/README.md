@@ -1,6 +1,8 @@
 # Numark MixStream Pro (gen1 family)
 
-> Draft. Not built or tested on hardware yet.
+> Boots on hardware (2026-11-08): screen console, /data, Wi-Fi, SSH, audio
+> card and control-surface MIDI port present. Installed via Engine OS USB
+> update, then updated with az0x-update. App side not tested yet.
 
 - SoC: RK3288, 2 GB RAM. Board `az05`, device `nh08`.
 - Device tree: `rk3288-az05-nh08.dtb`, model "Numark MIXSTREAM PRO",
