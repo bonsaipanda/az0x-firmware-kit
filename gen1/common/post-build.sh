@@ -11,11 +11,14 @@ COMMON=$(dirname "$0")
 # Boot script: U-Boot looks for /boot/boot.scr.uimg on the rootfs.
 # AZ0X_VERBOSE_BOOT=1 makes every boot verbose (screen console), for a first
 # test on a device whose /data can't hold the verbose-boot file yet.
-BOOTCMD=$COMMON/boot.cmd
-if [ "${AZ0X_VERBOSE_BOOT:-0}" = 1 ]; then
-	BOOTCMD=$(mktemp)
-	{ echo "setenv az0x_verbose 1"; cat "$COMMON/boot.cmd"; } > "$BOOTCMD"
-fi
+# A device can set U-Boot variables first in gen1/<device>/boot.env (for
+# example az0x_fbrotate, the console rotation for its panel).
+BOOTCMD=$(mktemp)
+{
+	[ "${AZ0X_VERBOSE_BOOT:-0}" = 1 ] && echo "setenv az0x_verbose 1"
+	[ -f "$COMMON/../$DEVICE/boot.env" ] && cat "$COMMON/../$DEVICE/boot.env"
+	cat "$COMMON/boot.cmd"
+} > "$BOOTCMD"
 "$HOST_DIR/bin/mkimage" -A arm -O linux -T script -C none -n "az0x-kit" \
 	-d "$BOOTCMD" "$TARGET_DIR/boot/boot.scr.uimg"
 
