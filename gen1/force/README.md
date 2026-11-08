@@ -16,7 +16,7 @@
 | Pads/knobs/audio (internal USB) | ALSA cards "Akai Pro Force" + "ADA2", MIDI ports Force Public/Private/MIDI Port (2026-11-08) |
 | Ethernet + SSH | works (2026-11-08) |
 | Wi-Fi | works at boot (2026-11-08); needs the board's NVRAM file, see below |
-| USB cable to computer | works (2026-11-08): create `/data/az0x/usb-to-computer` and the rear port goes to the computer at boot (serial console + `ssh root@10.55.0.1`) |
+| USB cable to computer | works (2026-11-08): create `/data/az0x/usb-to-computer` and the rear port goes to the computer at boot (serial console + `ssh root@10.55.0.1`). Development only: the internal hub (pads, USB-A ports) then belongs to the computer, not the device. `echo internal > /sys/devices/platform/usb-mux/state` gives it back. |
 
 ## Build
 

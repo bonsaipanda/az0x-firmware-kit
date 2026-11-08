@@ -46,7 +46,8 @@ echo "$UDC" > UDC || { echo "az0x: could not enable USB gadget"; exit 0; }
 # Some devices (the Force) route the rear USB port through a switch. Its
 # default, "internal", wires the port to the device's own hub (pads,
 # controls), so the gadget never reaches the computer. "external" sends the
-# port to the computer instead, but then the app probably loses the pads.
+# port to the computer instead, and with it the whole internal hub: pads,
+# controls AND the USB-A ports (sticks, MIDI keyboards) go to the computer.
 # So this is opt-in: create /data/az0x/usb-to-computer to switch at boot,
 # or run "echo external > /sys/devices/platform/usb-mux/state" by hand.
 MUX=/sys/devices/platform/usb-mux/state
