@@ -50,10 +50,13 @@ image's `/usr/lib/firmware`: `brcm/brcmfmac4345[56]-sdio.{bin,txt}`,
 `brcm/BCM4345C0.hcd`, `brcm/BCM4345C5.hcd`, `eta5805-dsp-nh08.bin` and
 `ilitek/`.
 
+## Update Mode
+
+Hold Left Deck **CUE + SAVED LOOP + AUTO LOOP** while powering on
+(confirmed 2026-11-08). Pressing POWER leaves it again.
+
 ## Open questions
 
-- Button combination for Update Mode (fastboot) at power-on (U-Boot reads
-  buttons through the SAR-ADC, as on the Force).
 - The MixStream Pro's USB id in Update Mode.
 - The data partition number on a real unit.
 - The control surface protocol (USB MIDI / HID?) for an app.
