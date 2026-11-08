@@ -38,11 +38,27 @@ SIZE_MIB=$(( ($(stat -c %s "$IMG") + 1048575) / 1048576 + 8 ))
 wipefs -a "$DEV" >/dev/null
 printf 'label: gpt\nstart=2048, size=%sMiB, name=az0x-rootfs\n' "$SIZE_MIB" | sfdisk -q "$DEV"
 partprobe "$DEV" 2>/dev/null || true
-sleep 2
-dd if="$IMG" of="${DEV}1" bs=4M conv=fsync status=progress
+udevadm settle 2>/dev/null || true
+
+# Wait for the partition's block device. Writing before it exists would
+# make dd create a plain file in /dev instead.
+PART="${DEV}1"
+n=0
+while [ ! -b "$PART" ] && [ $n -lt 20 ]; do
+	sleep 0.5
+	n=$((n + 1))
+done
+if [ -e "$PART" ] && [ ! -b "$PART" ]; then
+	echo "$PART exists but is not a block device (left over from an earlier run?)."
+	echo "Remove it with: sudo rm $PART   then run this again."
+	exit 1
+fi
+[ -b "$PART" ] || { echo "$PART did not appear; replug the stick and try again"; exit 1; }
+
+dd if="$IMG" of="$PART" bs=4M conv=fsync status=progress
 sync
 
-PARTUUID=$(blkid -s PARTUUID -o value "${DEV}1")
+PARTUUID=$(blkid -s PARTUUID -o value "$PART")
 echo
 echo "Done. Stick PARTUUID: $PARTUUID"
 echo "Next: tools/kexec-test-boot.sh <device-ip> <images-dir> $PARTUUID"
