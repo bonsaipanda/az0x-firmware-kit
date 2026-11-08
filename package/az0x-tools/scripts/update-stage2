@@ -31,13 +31,17 @@ log "updating /dev/$TARGET"
 if [ -n "$DATADEV" ]; then
 	# Shutdown left /data mounted read-only outside this RAM system; a
 	# second mount must match that, then both become writable.
+	# If it is still read-write there (something kept it open), a plain
+	# mount matches instead.
 	{ mount -o ro "$DATADEV" /data && mount -o remount,rw /data; } ||
+		mount "$DATADEV" /data ||
 		log "can't mount /data (no log will be kept)"
 fi
 if [ "$SRCDEV" = "$DATADEV" ] && mountpoint -q /data; then
 	IMG=/data$SRCPATH
 else
-	mount -o ro "$SRCDEV" /src || abort "can't mount $SRCDEV"
+	mount -o ro "$SRCDEV" /src || mount "$SRCDEV" /src ||
+		abort "can't mount $SRCDEV"
 	IMG=/src$SRCPATH
 fi
 [ -f "$IMG" ] || abort "image $IMG is gone"

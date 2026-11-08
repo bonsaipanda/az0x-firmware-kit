@@ -4,6 +4,10 @@
 # the disks read-only.
 /etc/init.d/rcK
 if [ -f /run/az0x-update/stage2 ]; then
+	# Stop every process first (init would only do it after this script),
+	# so nothing keeps /data or the image's disk open for writing and they
+	# can become read-only.
+	killall5 -15; sleep 1; killall5 -9
 	sync
 	awk '$1 ~ /^\/dev\// { print $2 }' /proc/mounts | while read -r m; do
 		mount -o remount,ro "$m" 2>/dev/null
