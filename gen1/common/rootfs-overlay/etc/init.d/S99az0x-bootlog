@@ -1,0 +1,43 @@
+#!/bin/sh
+# Saves a boot report to /data/az0x/logs, so a boot that can't be reached
+# over the network can still be diagnosed later (for example from stock
+# firmware, which mounts the same data partition at /data).
+# Written once right away and again after 60 s; keeps the last 10 boots.
+
+DIR=/data/az0x/logs
+
+report() {
+	echo "== az0x boot report $(date -u +%Y-%m-%dT%H:%M:%SZ), uptime $(cut -d' ' -f1 /proc/uptime) s"
+	cat /etc/az0x-kit-release
+	echo "== cmdline"; cat /proc/cmdline
+	echo "== ip addr"; ip addr
+	echo "== processes"; ps
+	echo "== mounts"; cat /proc/mounts
+	echo "== sound"; cat /proc/asound/cards 2>&1
+	echo "== input"; grep -E '^N:' /proc/bus/input/devices
+	echo "== messages"; logread 2>/dev/null || cat /var/log/messages 2>/dev/null
+	echo "== dmesg"; dmesg
+}
+
+save() {
+	mountpoint -q /data || return
+	mkdir -p "$DIR" || return
+	report > "$DIR/boot-$1.log" 2>&1
+	sync
+}
+
+case "$1" in
+	start)
+		[ -d "$DIR" ] || mkdir -p "$DIR" 2>/dev/null
+		# Rotate: boot-1 is the newest.
+		i=9
+		while [ $i -ge 1 ]; do
+			[ -f "$DIR/boot-$i.log" ] && mv "$DIR/boot-$i.log" "$DIR/boot-$((i + 1)).log"
+			i=$((i - 1))
+		done
+		save 1
+		( sleep 60; save 1 ) &
+		;;
+	stop) ;;
+	*) echo "usage: $0 start"; exit 1 ;;
+esac

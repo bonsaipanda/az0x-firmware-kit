@@ -11,7 +11,10 @@
 tty1::respawn:/usr/libexec/az0x/app-launch
 
 # Serial console (debug UART) for development.
-console::respawn:/sbin/getty -L console 0 vt100
+ttyS2::respawn:/sbin/getty -L ttyS2 115200 vt100
+
+# A login on the screen too (switch with Alt+F2 on a USB keyboard).
+tty2::respawn:/sbin/getty 38400 tty2
 
 ::shutdown:/etc/init.d/rcK
 ::shutdown:/bin/umount -a -r

@@ -32,14 +32,15 @@ PYTHON=$(PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v "^${HOST_DIR:-/nonex
 	exit 1
 }
 
-VERSION="az0x-kit-$(git -C "$BR2_EXTERNAL_AZ0X_PATH" describe --always --dirty 2>/dev/null || echo unknown)"
+# Numeric, so the stock updater can compare it (it shows a non-numeric one as 0.0).
+VERSION=$(cat "$BR2_EXTERNAL_AZ0X_PATH/VERSION")
 
 # shellcheck disable=SC2086
 "$PYTHON" -I "$BR2_EXTERNAL_AZ0X_PATH/tools/az0x_img.py" pack \
 	"$IMAGES/$DEVICE-update.img" \
 	--version "$VERSION" \
 	--compatible "$COMPAT" $usb_args \
-	--description "az0x-firmware-kit image for $DEVICE (unofficial)" \
+	--description "az0x-firmware-kit $VERSION ($(git -C "$BR2_EXTERNAL_AZ0X_PATH" describe --always --dirty 2>/dev/null || echo unknown)) for $DEVICE, unofficial" \
 	--part "rootfs=$ROOTFS"
 
 "$PYTHON" -I "$BR2_EXTERNAL_AZ0X_PATH/tools/az0x_img.py" verify "$IMAGES/$DEVICE-update.img"

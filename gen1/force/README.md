@@ -11,7 +11,7 @@
 |---|---|
 | Buildroot config | done; `make defconfig` passes |
 | Full build | works (2026-11-07): rootfs uses ~80 MiB, update image 14 MiB |
-| Boots on hardware | not tested |
+| Boots on hardware | first install 2026-11-08: installs via stock "USB Drive Update", reboots to a blinking cursor, not reachable on network yet |
 | Display, touch | not tested |
 | Pads/knobs/audio (internal USB) | not tested |
 | Wi-Fi | needs the board's NVRAM file (`brcmfmac4339-sdio.txt` or `brcmfmac43455-sdio.txt`), see below |
