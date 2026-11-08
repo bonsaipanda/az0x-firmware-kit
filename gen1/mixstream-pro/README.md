@@ -12,9 +12,9 @@
   (`nh08`). Partitions in the image: `splash`, `recoverysplash` (raw
   800x1280, 4 bytes per pixel, like the Force) and `rootfs`. Stock kernel
   6.18.57-az01 (PREEMPT_RT, LoadPin), the same inMusic tree the kit uses.
-- USB ids in the image header: `15e4:d008`, `15e4:d00b`, `15e4:203f`. Which
-  one is the MixStream Pro in Update Mode is still to be checked on the
-  device (`lsusb` while it is in Update Mode); the draft uses `15e4:203f`.
+- USB ids in the image header: `15e4:d008`, `15e4:d00b`, `15e4:203f`. Seen
+  on the device: in Update Mode the MixStream Pro is `15e4:203f` ("Numark
+  MIXSTREAM PRO", bcdDevice 99.99, one "Android Fastboot" interface).
 
 ## Hardware (from the stock device tree and Engine OS)
 
