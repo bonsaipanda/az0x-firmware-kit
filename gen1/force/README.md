@@ -41,3 +41,15 @@ Lay out the folder like `/lib/firmware` (so `brcm/brcmfmac43455-sdio.txt`).
 ```sh
 AZ0X_SSH_AUTHORIZED_KEYS=~/.ssh/id_ed25519.pub make force
 ```
+
+## Quiet and verbose boot
+
+Boot is quiet by default: the Force's own boot picture stays on the screen
+until the app draws, and the app's output goes to
+`/data/az0x/logs/app.log`. For development, `touch /data/az0x/verbose-boot`
+shows kernel and init messages on the screen again (next boot).
+
+## App exit codes
+
+`/opt/app/start` can exit with 10 (power off), 11 (restart) or 12 (restart
+into Update Mode). Anything else restarts the app.

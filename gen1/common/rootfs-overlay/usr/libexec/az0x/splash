@@ -1,0 +1,18 @@
+#!/bin/sh
+# On a quiet boot, copy the device's own boot picture (the "splash"
+# partition, which U-Boot shows) onto the screen, so it stays up until the
+# app draws. gen1 splash partitions hold a raw picture in the panel's own
+# format (Force: 800x1280, 4 bytes per pixel).
+grep -qw quiet /proc/cmdline || exit 0
+[ -e /dev/fb0 ] || exit 0
+for u in /sys/class/block/*/uevent; do
+	grep -qx PARTNAME=splash "$u" || continue
+	dev=/dev/$(sed -n 's/^DEVNAME=//p' "$u")
+	stride=$(cat /sys/class/graphics/fb0/stride)
+	# visible height from the current mode, e.g. "U:800x1280p-60"
+	h=$(head -n1 /sys/class/graphics/fb0/modes | sed -n "s/^[^:]*:[0-9]*x\([0-9]*\).*/\1/p")
+	[ -n "$h" ] || h=$(cut -d, -f2 /sys/class/graphics/fb0/virtual_size)
+	[ -b "$dev" ] && [ -n "$stride" ] && [ -n "$h" ] || exit 0
+	dd if="$dev" of=/dev/fb0 bs="$stride" count="$h" 2>/dev/null
+	exit 0
+done

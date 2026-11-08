@@ -5,6 +5,8 @@
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
 ::sysinit:/bin/hostname -F /etc/hostname
+# Quiet boot: put the device's boot picture back on the screen.
+::sysinit:/usr/libexec/az0x/splash
 # USB serial + network to a PC, before anything that could get stuck.
 ::sysinit:/usr/libexec/az0x/usb-gadget
 
