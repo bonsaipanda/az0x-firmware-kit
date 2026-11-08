@@ -1,6 +1,6 @@
 # On-device updates
 
-> First version, not yet tested on hardware.
+> Tested on the Force (2026-11-08): kit -> kit in ~45 s, kit -> stock 3.10.
 
 The device can install another firmware image by itself, without a
 computer: a kit build, or a stock image to go back to stock. An app (for
