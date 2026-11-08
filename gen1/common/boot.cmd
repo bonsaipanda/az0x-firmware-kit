@@ -23,7 +23,7 @@ then
 fi
 
 # console=tty0 (last, so it becomes /dev/console) shows kernel and init
-# messages on the screen as well as the serial port. fbcon=rotate:1 turns
+# messages on the screen as well as the serial port. fbcon=rotate:3 turns
 # the text upright on the portrait panels.
-setenv bootargs "${bootargs} fsck.repair=yes fbcon=rotate:1 console=tty0 loglevel=7"
+setenv bootargs "${bootargs} fsck.repair=yes fbcon=rotate:3 console=tty0 loglevel=7"
 bootz ${kernel_addr_r} - ${fdt_addr_r}
