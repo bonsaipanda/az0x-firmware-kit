@@ -7,7 +7,7 @@ tmpfs                           /tmp        tmpfs   mode=1777                   
 tmpfs                           /run        tmpfs   mode=0755,nosuid,nodev        0      0
 tmpfs                           /var/log    tmpfs   mode=0755                     0      0
 sysfs                           /sys        sysfs   defaults                      0      0
-# The device's user data partition (stock firmware keeps projects here).
-/dev/mmcblk0p8                  /data       ext4    rw,noatime,nofail             0      0
+# /data (the eMMC partition named "data") is mounted by
+# /usr/libexec/az0x/mount-data: its number differs between devices.
 # The SD card slot, if a card is in.
 /dev/mmcblk1p1                  /sdcard     auto    rw,noatime,nofail             0      0

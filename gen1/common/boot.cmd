@@ -26,14 +26,16 @@ fi
 # picture (splash partition) stays up until the app draws. Messages still
 # go to the serial port and /data/az0x/logs.
 #
-# Verbose boot for development: create /data/az0x/verbose-boot (gen1 keeps
-# /data on partition 8), or build with AZ0X_VERBOSE_BOOT=1. console=tty0 (last, so it becomes /dev/console)
+# Verbose boot for development: create /data/az0x/verbose-boot (/data is
+# partition 8 on the Force; a device's boot.env sets az0x_datapart when it
+# differs), or build with AZ0X_VERBOSE_BOOT=1. console=tty0 (last, so it becomes /dev/console)
 # then shows kernel and init messages on the screen too; fbcon=rotate:3
 # turns the text upright on the Force's panel; a device's boot.env can set
 # az0x_fbrotate for panels mounted the other way round.
 test -n "${az0x_fbrotate}" || setenv az0x_fbrotate 3
 setenv bootargs "${bootargs} fsck.repair=yes fbcon=rotate:${az0x_fbrotate}"
-if test "${az0x_verbose}" = "1" || test -e ${devtype} ${devnum}:8 /az0x/verbose-boot
+test -n "${az0x_datapart}" || setenv az0x_datapart 8
+if test "${az0x_verbose}" = "1" || test -e ${devtype} ${devnum}:${az0x_datapart} /az0x/verbose-boot
 then
 	setenv bootargs "${bootargs} console=tty0 loglevel=7"
 else

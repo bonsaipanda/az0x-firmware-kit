@@ -1,0 +1,11 @@
+#!/bin/sh
+# Mounts the eMMC partition named "data" (GPT name) on /data. Its number
+# differs between devices (Force: p8, MixStream Pro: p7).
+mountpoint -q /data && exit 0
+for u in /sys/class/block/*/uevent; do
+	grep -qx PARTNAME=data "$u" || continue
+	dev=/dev/$(sed -n 's/^DEVNAME=//p' "$u")
+	case "$dev" in /dev/mmcblk1*) continue ;; esac   # never an SD card
+	mount -t ext4 -o rw,noatime "$dev" /data && exit 0
+done
+echo "az0x: no data partition found"

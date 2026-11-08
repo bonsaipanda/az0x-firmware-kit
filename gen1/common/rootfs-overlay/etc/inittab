@@ -7,6 +7,7 @@
 ::sysinit:/bin/mount -o remount,ro /
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
+::sysinit:/usr/libexec/az0x/mount-data
 ::sysinit:/bin/hostname -F /etc/hostname
 # USB serial + network to a PC, before anything that could get stuck.
 ::sysinit:/usr/libexec/az0x/usb-gadget
