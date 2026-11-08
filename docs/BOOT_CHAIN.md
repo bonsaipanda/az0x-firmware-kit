@@ -104,6 +104,12 @@ USB update mode.
 
 ## Running system notes
 
+- **No kexec into another kernel.** The stock kernel's LoadPin also covers
+  kexec: it only accepts a kernel loaded from the rootfs partition, and
+  denies the old kexec API too (`LoadPin: kexec-image denied`,
+  `old-api-denied`). So a stock device can't boot a kit kernel from USB or
+  `/tmp`; testing needs the rootfs partition (fastboot) or the bootloader.
+
 - **LoadPin is enforcing** in the stock kernel: kernel modules and firmware
   only load from the filesystem the first one came from (the rootfs). The
   kit keeps all modules and firmware on the rootfs.
