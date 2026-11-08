@@ -1,0 +1,1 @@
+root=PARTUUID=24d1deac-3434-1a4e-98d1-68ee2945a5f1 rootwait ro rfkill.default_state=0  fsck.repair=yes fbcon=rotate:3 console=tty0 loglevel=7 isolcpus=2-3

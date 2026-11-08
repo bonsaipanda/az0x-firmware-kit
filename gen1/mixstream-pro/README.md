@@ -23,10 +23,10 @@
 - Audio: `inmusic,nh08-audio` (nh08 codec + TI TAS5805M amp for the built-in
   speakers). Kernel modules already in the inMusic config. The amp's DSP
   needs `/lib/firmware/eta5805-dsp-nh08.bin` (from Engine OS).
-- Controls (jog wheels, pads, faders): a separate MCU, "NH08 Controller",
-  reached over USB through the internal hub as a "Control Surface" device
-  (Engine flashes it from `/usr/Engine/Firmware/NH08 Controller`). No UART
-  or SPI link to it in the device tree (SPI is disabled; UART0 is Bluetooth).
+- Controls (jog wheels, pads, faders): a separate MCU, "NH08 Controller"
+  (Engine flashes it from `/usr/Engine/Firmware/NH08 Controller`). Seen on
+  the device with the kit: it is ALSA card "Surface" ("MIDI UART - Control
+  Surface"), a rawmidi port `hw:0,0` over a UART, not a USB device.
 - Wi-Fi/Bluetooth: Broadcom/Cypress BCM4345 family on SDIO (Engine OS ships
   `brcmfmac43455-sdio` / `brcmfmac43456-sdio` and `BCM4345C0/C5.hcd`).
 - Ethernet, RTC hym8563, PMIC act8846. The USB switch (`usb-mux`) only has
@@ -57,9 +57,8 @@ Hold Left Deck **CUE + SAVED LOOP + AUTO LOOP** while powering on
 
 ## Open questions
 
-- The MixStream Pro's USB id in Update Mode.
 - The data partition number on a real unit.
-- The control surface protocol (USB MIDI / HID?) for an app.
+- The control surface's MIDI messages (jog wheels, pads, faders) for an app.
 
 ## Caution
 
