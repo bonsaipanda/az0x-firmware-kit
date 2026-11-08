@@ -37,7 +37,10 @@ test:
 	python3 -I tools/test_az0x_img.py
 
 define device_rules
-$(OUT_ROOT)/$(1)/.config: | $(BR_DIR)/Makefile
+# Re-run defconfig whenever the device's defconfig changes, so edits to it
+# always reach an existing output dir (menuconfig changes are then replaced;
+# save them with <device>-savedefconfig first).
+$(OUT_ROOT)/$(1)/.config: $(CURDIR)/$(DIR_$(1))/buildroot.defconfig | $(BR_DIR)/Makefile
 	$$(MAKE) -C $(BR_DIR) O=$(OUT_ROOT)/$(1) BR2_EXTERNAL=$(CURDIR) \
 		BR2_DEFCONFIG=$(CURDIR)/$(DIR_$(1))/buildroot.defconfig defconfig
 
