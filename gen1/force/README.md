@@ -12,7 +12,7 @@
 | Buildroot config | done; `make defconfig` passes |
 | Full build | works (2026-11-07): rootfs uses ~80 MiB, update image 14 MiB |
 | Boots on hardware | yes (2026-11-08, flashed with fastboot): boot messages on screen, hello app runs |
-| Display, touch | console on screen; touchscreen (ILI2116) and buttons show up as inputs |
+| Display, touch | quiet boot keeps the Force boot picture until the app draws (2026-11-08); touchscreen and buttons show up as inputs |
 | Pads/knobs/audio (internal USB) | ALSA cards "Akai Pro Force" + "ADA2", MIDI ports Force Public/Private/MIDI Port (2026-11-08) |
 | Ethernet + SSH | works (2026-11-08) |
 | Wi-Fi | works at boot (2026-11-08); needs the board's NVRAM file, see below |
