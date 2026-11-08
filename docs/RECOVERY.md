@@ -25,6 +25,7 @@
      updater app uses ("Update Mode").
    - Other devices: not known yet.
    - From a running kit firmware (SSH or console): `az0x-reboot loader`
+     (tested on the Force 2026-11-08)
      restarts straight into Update Mode, no buttons needed. It uses the
      same reboot argument as stock's "Switch to Update Mode"; nothing is
      written to disk, and the boot after that is normal again.
