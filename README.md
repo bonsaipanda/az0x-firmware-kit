@@ -76,6 +76,8 @@ bootloader and your `data` partition stay as they are.
 
 ## How it works
 
+To try a build without flashing, see [docs/TEST_BOOT.md](docs/TEST_BOOT.md).
+
 [docs/BOOT_CHAIN.md](docs/BOOT_CHAIN.md) describes what we found out about
 the boot process, partitions and the update image format.
 

@@ -1,0 +1,58 @@
+#!/bin/sh
+# Networking for az0x-firmware-kit, plus the persistent state folder.
+#
+# - Persistent state lives in /data/az0x (the device's data partition).
+#   If /data didn't mount, a tmpfs stands in so the system still boots.
+# - Ethernet (eth0): DHCP in the background, whenever a cable is plugged in.
+# - Wi-Fi (wlan0): started if /data/az0x/wpa_supplicant.conf exists.
+#   Example file:
+#       ctrl_interface=/run/wpa_supplicant
+#       network={
+#           ssid="MyNetwork"
+#           psk="secret"
+#       }
+
+STATE=/data/az0x
+
+start() {
+	if ! mountpoint -q /data; then
+		echo "az0x: /data not mounted, using a temporary folder"
+		mount -t tmpfs -o mode=0755 tmpfs /data
+	fi
+	mkdir -p "$STATE/dropbear"
+
+	ip link set lo up
+
+	if ip link show eth0 >/dev/null 2>&1; then
+		ip link set eth0 up
+		udhcpc -b -S -i eth0 -p /run/udhcpc.eth0.pid -x hostname:"$(hostname)"
+	fi
+
+	if [ -f "$STATE/wpa_supplicant.conf" ]; then
+		# brcmfmac loads its firmware asynchronously; give wlan0 a moment.
+		n=0
+		while ! ip link show wlan0 >/dev/null 2>&1 && [ $n -lt 10 ]; do
+			sleep 1
+			n=$((n + 1))
+		done
+		if ip link show wlan0 >/dev/null 2>&1; then
+			wpa_supplicant -B -i wlan0 -c "$STATE/wpa_supplicant.conf" -P /run/wpa_supplicant.pid
+			udhcpc -b -S -i wlan0 -p /run/udhcpc.wlan0.pid -x hostname:"$(hostname)"
+		else
+			echo "az0x: no wlan0 (Wi-Fi firmware missing?)"
+		fi
+	fi
+}
+
+stop() {
+	for f in /run/udhcpc.*.pid /run/wpa_supplicant.pid; do
+		[ -f "$f" ] && kill "$(cat "$f")" 2>/dev/null
+	done
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; start ;;
+	*) echo "usage: $0 start|stop|restart"; exit 1 ;;
+esac

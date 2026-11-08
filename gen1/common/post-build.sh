@@ -17,6 +17,11 @@ ls "$TARGET_DIR"/boot/*.dtb >/dev/null 2>&1 || { echo "post-build: no device tre
 
 mkdir -p "$TARGET_DIR/data" "$TARGET_DIR/sdcard"
 
+# SSH host keys persist on the data partition (the rootfs is read-only).
+# S41az0x-network creates the folder at boot.
+rm -rf "$TARGET_DIR/etc/dropbear"
+ln -s /data/az0x/dropbear "$TARGET_DIR/etc/dropbear"
+
 # Optional: extra firmware files (for example the Wi-Fi NVRAM .txt files,
 # which are board specific and not in linux-firmware). Copied as-is into
 # /lib/firmware. Set AZ0X_EXTRA_FIRMWARE=/path/to/dir when building.
