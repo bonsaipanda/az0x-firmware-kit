@@ -14,9 +14,10 @@ BR_DIR     ?= $(CURDIR)/.buildroot/$(BR_VERSION)
 OUT_ROOT   ?= $(CURDIR)/output
 
 # device name -> folder holding its buildroot.defconfig
-DEVICES      := force mpc-live
+DEVICES      := force mpc-live mixstream-pro
 DIR_force    := gen1/force
 DIR_mpc-live := gen1/mpc-live
+DIR_mixstream-pro := gen1/mixstream-pro
 
 .PHONY: all help buildroot test $(DEVICES)
 all: help
