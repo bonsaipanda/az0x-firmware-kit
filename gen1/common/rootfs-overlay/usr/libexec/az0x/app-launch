@@ -2,6 +2,12 @@
 # Runs the firmware's one application. init respawns this script, so a
 # crashing app comes back. After 5 fast crashes in a row it waits 30 s
 # before trying again, so a broken app can't spin the CPU.
+#
+# Exit codes the app can use:
+#   10  power off       11  restart       12  restart into Update Mode
+#
+# On a quiet boot (the default) the app's output goes to
+# /data/az0x/logs/app.log instead of the screen.
 
 APP=/opt/app/start
 STATE=/run/az0x-app-crashes
@@ -19,6 +25,11 @@ if [ ! -x "$APP" ]; then
 	exec sleep 3600
 fi
 
+if grep -qw quiet /proc/cmdline && [ -d /data/az0x ]; then
+	mkdir -p /data/az0x/logs
+	exec >> /data/az0x/logs/app.log 2>&1
+fi
+
 n=$(cat "$STATE" 2>/dev/null || echo 0)
 if [ "$n" -ge 5 ]; then
 	echo "az0x: $APP keeps exiting; waiting 30 s"
@@ -31,6 +42,12 @@ start=$(cut -d. -f1 /proc/uptime)
 code=$?
 end=$(cut -d. -f1 /proc/uptime)
 logger -t az0x "app exited with $code after $((end - start)) s"
+
+case $code in
+	10) exec poweroff ;;
+	11) exec reboot ;;
+	12) sync; exec /usr/sbin/az0x-reboot loader ;;
+esac
 
 if [ $((end - start)) -lt 10 ]; then
 	echo $((n + 1)) > "$STATE"
