@@ -25,23 +25,29 @@ start() {
 
 	if ip link show eth0 >/dev/null 2>&1; then
 		ip link set eth0 up
-		udhcpc -b -S -i eth0 -p /run/udhcpc.eth0.pid -x hostname:"$(hostname)"
+		udhcpc -b -S -i eth0 -p /run/udhcpc.eth0.pid -x hostname:"$(hostname)" </dev/null >/dev/null 2>&1
 	fi
 
+	# Wi-Fi runs in the background so it can never hold up the rest of
+	# startup (the first Force boot hung somewhere after Ethernet came up).
 	if [ -f "$STATE/wpa_supplicant.conf" ]; then
-		# brcmfmac loads its firmware asynchronously; give wlan0 a moment.
-		n=0
-		while ! ip link show wlan0 >/dev/null 2>&1 && [ $n -lt 10 ]; do
-			sleep 1
-			n=$((n + 1))
-		done
-		if ip link show wlan0 >/dev/null 2>&1; then
-			wpa_supplicant -B -i wlan0 -c "$STATE/wpa_supplicant.conf" -P /run/wpa_supplicant.pid
-			udhcpc -b -S -i wlan0 -p /run/udhcpc.wlan0.pid -x hostname:"$(hostname)"
-		else
-			echo "az0x: no wlan0 (Wi-Fi firmware missing?)"
-		fi
+		wifi </dev/null >/dev/null 2>&1 &
 	fi
+}
+
+wifi() {
+	# brcmfmac loads its firmware asynchronously; give wlan0 a moment.
+	n=0
+	while ! ip link show wlan0 >/dev/null 2>&1 && [ $n -lt 20 ]; do
+		sleep 1
+		n=$((n + 1))
+	done
+	if ! ip link show wlan0 >/dev/null 2>&1; then
+		logger -t az0x "no wlan0 (Wi-Fi firmware missing?)"
+		return
+	fi
+	wpa_supplicant -B -s -i wlan0 -c "$STATE/wpa_supplicant.conf" -P /run/wpa_supplicant.pid
+	udhcpc -b -S -i wlan0 -p /run/udhcpc.wlan0.pid -x hostname:"$(hostname)"
 }
 
 stop() {
