@@ -67,6 +67,26 @@ make force-menuconfig     # az0x firmware kit -> application source directory
 or set `BR2_PACKAGE_AZ0X_APP_SOURCE_DIR` in your own copy of the device's
 `buildroot.defconfig`. See [app/hello](app/hello) for the smallest example.
 
+### USB sound cards for your app
+
+The device's USB port can also show up on the computer as sound cards (USB
+Audio Class 2: no driver needed on Linux, macOS or Windows 10+), each its own
+device, for example for OBS. List them in `/data/az0x/usb-audio`, one per
+line, and reboot:
+
+```
+# id     channels  rates               name on the computer
+mix      2         44100,48000,96000   Djaia Full Mix
+master   2         44100,48000,96000   Djaia Master
+```
+
+They only send (device to computer), 32-bit, at the rate the computer picks.
+On the device each is an ALSA card (`UAC2Gadget`); `/run/az0x/usb-audio`
+says which card number each id got. Your app plays into it and corrects for
+the drift between its own sound card's clock and the USB clock (the card's
+`Playback Pitch 1000000` control, or resampling). The RK3288 has room for 2
+such cards next to the USB serial port and network; more lines are skipped.
+
 ## Flashing
 
 See [docs/RECOVERY.md](docs/RECOVERY.md). In short: start the device in

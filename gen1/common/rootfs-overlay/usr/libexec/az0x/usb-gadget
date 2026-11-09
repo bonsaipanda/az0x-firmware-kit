@@ -4,6 +4,9 @@
 #   - a serial port with a login (Linux: /dev/ttyACM0, 115200), and
 #   - a network card: the device is 10.55.0.1 and hands the computer
 #     10.55.0.2 by DHCP, so "ssh root@10.55.0.1" works.
+#   - optionally, sound cards (USB Audio Class 2, no driver needed on Linux,
+#     macOS or Windows 10+) that the app plays into: one per line of
+#     /data/az0x/usb-audio, see usb_audio below.
 # Runs early (from inittab sysinit), before the normal start scripts, so it
 # works even if those get stuck.
 
@@ -41,7 +44,78 @@ echo 02:a0:0c:00:00:02 > functions/ecm.usb0/host_addr
 ln -s functions/acm.usb0 configs/c.1/
 ln -s functions/ecm.usb0 configs/c.1/
 
+# Sound cards to the computer, from /data/az0x/usb-audio (absent: none):
+#   # id  channels  rates               name
+#   mix   2         44100,48000,96000   Djaia Full Mix
+# Each is its own device on the computer (OBS sees them separately), sending
+# only (device -> computer), 32-bit, at the rate the computer picks from the
+# list. On the device each becomes an ALSA card "UAC2Gadget*", in the order
+# of the lines; /run/az0x/usb-audio lists "<id> <ALSA card number>" once
+# bound. The app writes into it; the card runs on the USB clock, so the app
+# corrects for drift (the "Playback Pitch 1000000" control or resampling).
+#
+# Limit: the RK3288's USB port has 6 IN endpoints (TX FIFOs, see
+# g-tx-fifo-size in the device tree). Serial and network take 2 each, every
+# sound card takes 1 (no volume/mute controls, so no interrupt endpoint).
+# More cards than slots are skipped, never the serial or network.
+usb_audio() {
+	conf=/data/az0x/usb-audio
+	[ -r "$conf" ] || return 0
+	fifos=$(for f in /proc/device-tree/usb@ff580000/g-tx-fifo-size /proc/device-tree/*/usb@ff580000/g-tx-fifo-size; do
+		[ -r "$f" ] && { echo $(( $(wc -c < "$f") / 4 )); break; }; done)
+	slots=$(( ${fifos:-6} - 4 ))
+	n=0
+	: > /run/az0x/usb-audio.order
+	while read -r id ch rates name; do
+		case "$id" in ''|\#*) continue ;; esac
+		case "$id" in *[!a-z0-9_]*) echo "az0x: usb-audio: bad id '$id'"; continue ;; esac
+		if [ "$n" -ge "$slots" ]; then
+			echo "az0x: usb-audio: no USB endpoint left for '$id' (max $slots cards)"
+			continue
+		fi
+		case "$ch" in [1-8]) ;; *) ch=2 ;; esac
+		F=functions/uac2.$id
+		mkdir -p "$F" || continue
+		echo $(( (1 << ch) - 1 )) > "$F/p_chmask"
+		echo "${rates:-48000}" > "$F/p_srate"
+		echo 4 > "$F/p_ssize"
+		echo 0 > "$F/c_chmask"        # nothing from the computer
+		echo 0 > "$F/p_mute_present"  # no controls: no interrupt endpoint
+		echo 0 > "$F/p_volume_present"
+		echo 0 > "$F/c_mute_present"
+		echo 0 > "$F/c_volume_present"
+		echo 0x0602 > "$F/c_terminal_type" 2>/dev/null  # digital audio interface
+		name=${name:-$id}
+		for k in function_name if_ctrl_name p_it_name; do
+			echo "$name" > "$F/$k" 2>/dev/null
+		done
+		ln -s "$F" configs/c.1/
+		echo "$id" >> /run/az0x/usb-audio.order
+		n=$((n + 1))
+	done < "$conf"
+	# A different set of functions under the same USB id confuses Windows'
+	# descriptor cache: give each set its own bcdDevice.
+	if [ "$n" -gt 0 ]; then
+		echo 0x01$(cksum "$conf" | cut -c1-2) > bcdDevice
+		echo "serial + network + audio" > configs/c.1/strings/0x409/configuration
+	fi
+}
+mkdir -p /run/az0x
+usb_audio
+
 echo "$UDC" > UDC || { echo "az0x: could not enable USB gadget"; exit 0; }
+
+# Which ALSA card each sound card became: the gadget's cards appear in the
+# order the functions were linked.
+if [ -s /run/az0x/usb-audio.order ]; then
+	set -- $(for c in /proc/asound/card[0-9]*; do grep -q 'UAC2' "$c/id" 2>/dev/null && echo "${c#/proc/asound/card}"; done | sort -n)
+	: > /run/az0x/usb-audio
+	while read -r id; do
+		[ -n "$1" ] || break
+		echo "$id $1" >> /run/az0x/usb-audio
+		shift
+	done < /run/az0x/usb-audio.order
+fi
 
 # Some devices (the Force) route the rear USB port through a switch. Its
 # default, "internal", wires the port to the device's own hub (pads,
