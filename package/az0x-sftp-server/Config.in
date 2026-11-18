@@ -1,0 +1,6 @@
+config BR2_PACKAGE_AZ0X_SFTP_SERVER
+	bool "az0x-sftp-server"
+	help
+	  OpenSSH's sftp-server only (BSD licence), at /usr/libexec/sftp-server
+	  where dropbear looks for it: file managers (Nautilus, WinSCP, FileZilla)
+	  can browse the device over SFTP. No sshd: dropbear stays the SSH server.
