@@ -7,6 +7,10 @@
 #   - optionally, sound cards (USB Audio Class 2, no driver needed on Linux,
 #     macOS or Windows 10+) that the app plays into: one per line of
 #     /data/az0x/usb-audio, see usb_audio below.
+#   - optionally, a USB MIDI port (class compliant, no driver needed) when
+#     /data/az0x/usb-midi exists, see below.
+# /data/az0x/usb-name, if there, is the device's name on the computer
+# (Linux takes its ALSA card name and MIDI port names from it).
 # Runs early (from inittab sysinit), before the normal start scripts, so it
 # works even if those get stuck.
 
@@ -28,7 +32,8 @@ echo 0x02 > bDeviceSubClass
 echo 0x01 > bDeviceProtocol
 mkdir -p strings/0x409
 echo "az0x-firmware-kit" > strings/0x409/manufacturer
-echo "$(hostname) (az0x-firmware-kit)" > strings/0x409/product
+product=$(sed -n '/^[^#]/{p;q}' /data/az0x/usb-name 2>/dev/null)
+echo "${product:-$(hostname) (az0x-firmware-kit)}" > strings/0x409/product
 sn=$(cat /proc/device-tree/serial-number 2>/dev/null | tr -d '\0')
 echo "${sn:-az0x}" > strings/0x409/serialnumber
 
@@ -36,13 +41,60 @@ mkdir -p configs/c.1/strings/0x409
 echo "serial + network" > configs/c.1/strings/0x409/configuration
 echo 250 > configs/c.1/MaxPower
 
-mkdir -p functions/acm.usb0
+# IN endpoints (device -> computer) are the scarce thing: the RK3288's USB
+# port has 6 (TX FIFOs, see g-tx-fifo-size in the device tree). The network
+# takes 2, the serial port 2, a MIDI port 1, every sound card 1.
+fifos=$(for f in /proc/device-tree/usb@ff580000/g-tx-fifo-size /proc/device-tree/*/usb@ff580000/g-tx-fifo-size; do
+	[ -r "$f" ] && { echo $(( $(wc -c < "$f") / 4 )); break; }; done)
+slots=${fifos:-6}
+
+# The serial port goes unless the sound cards and MIDI leave it room (sound
+# cards are only dropped for the serial port when there's no MIDI).
+serial=1
+if [ -e /data/az0x/usb-midi ]; then
+	want=$(grep -c '^[a-z0-9_]' /data/az0x/usb-audio 2>/dev/null)
+	if [ "$((slots - 2 - 1 - 2))" -lt "${want:-0}" ]; then
+		echo "az0x: no USB serial port (its endpoints went to MIDI and the sound cards)"
+		serial=0
+	fi
+fi
+what="network"
+if [ "$serial" = 1 ]; then
+	mkdir -p functions/acm.usb0
+	ln -s functions/acm.usb0 configs/c.1/
+	slots=$((slots - 2))
+	what="serial + network"
+fi
 mkdir -p functions/ecm.usb0
 # Fixed MACs so the computer sees the same network card every time.
 echo 02:a0:0c:00:00:01 > functions/ecm.usb0/dev_addr
 echo 02:a0:0c:00:00:02 > functions/ecm.usb0/host_addr
-ln -s functions/acm.usb0 configs/c.1/
 ln -s functions/ecm.usb0 configs/c.1/
+slots=$((slots - 2))
+
+# A USB MIDI port, when /data/az0x/usb-midi exists: one port each way. Its
+# first line that isn't a comment, if any, names the port (the USB jacks):
+# Linux calls it "<device name> <port name>" (usb-name "Djaia" + "Sync" =
+# "Djaia Sync"), macOS and Windows show it under the device. Without one,
+# computers name it after the device alone (Linux: "<device name> MIDI 1"). On the device it's the ALSA card "UsbMidi"
+# (hw:UsbMidi,0). It takes the serial port's place if the two don't fit next
+# to the sound cards: SSH over the USB network still works.
+if [ -e /data/az0x/usb-midi ] && [ "$slots" -gt 0 ]; then
+	F=functions/midi.usb0
+	if mkdir -p "$F"; then
+		echo UsbMidi > "$F/id"
+		echo 1 > "$F/in_ports"
+		echo 1 > "$F/out_ports"
+		echo 8 > "$F/qlen"         # (fewer stale messages waiting while nobody reads)
+		port=$(sed -n '/^[^#]/{p;q}' /data/az0x/usb-midi 2>/dev/null)
+		if [ -n "$port" ]; then
+			mkdir -p "$F/strings/0x409" && echo "$port" > "$F/strings/0x409/interface"
+		fi
+		ln -s "$F" configs/c.1/
+		slots=$((slots - 1))
+		what="$what + MIDI"
+	fi
+fi
 
 # Sound cards to the computer, from /data/az0x/usb-audio (absent: none):
 #   # id  channels  rates               name
@@ -54,23 +106,19 @@ ln -s functions/ecm.usb0 configs/c.1/
 # bound. The app writes into it; the card runs on the USB clock, so the app
 # corrects for drift (the "Playback Pitch 1000000" control or resampling).
 #
-# Limit: the RK3288's USB port has 6 IN endpoints (TX FIFOs, see
-# g-tx-fifo-size in the device tree). Serial and network take 2 each, every
-# sound card takes 1 (no volume/mute controls, so no interrupt endpoint).
-# More cards than slots are skipped, never the serial or network.
+# Every sound card takes 1 IN endpoint (no volume/mute controls, so no
+# interrupt endpoint). More cards than slots left are skipped, never the
+# network, MIDI or (without MIDI) the serial port.
 usb_audio() {
 	conf=/data/az0x/usb-audio
 	[ -r "$conf" ] || return 0
-	fifos=$(for f in /proc/device-tree/usb@ff580000/g-tx-fifo-size /proc/device-tree/*/usb@ff580000/g-tx-fifo-size; do
-		[ -r "$f" ] && { echo $(( $(wc -c < "$f") / 4 )); break; }; done)
-	slots=$(( ${fifos:-6} - 4 ))
 	n=0
 	: > /run/az0x/usb-audio.order
 	while read -r id ch rates name; do
 		case "$id" in ''|\#*) continue ;; esac
 		case "$id" in *[!a-z0-9_]*) echo "az0x: usb-audio: bad id '$id'"; continue ;; esac
-		if [ "$n" -ge "$slots" ]; then
-			echo "az0x: usb-audio: no USB endpoint left for '$id' (max $slots cards)"
+		if [ "$slots" -le 0 ]; then
+			echo "az0x: usb-audio: no USB endpoint left for '$id' (max $n cards)"
 			continue
 		fi
 		case "$ch" in [1-8]) ;; *) ch=2 ;; esac
@@ -79,6 +127,11 @@ usb_audio() {
 		echo $(( (1 << ch) - 1 )) > "$F/p_chmask"
 		echo "${rates:-48000}" > "$F/p_srate"
 		echo 4 > "$F/p_ssize"
+		# Packets every 250 us instead of every 1 ms: smaller packets (2 ch 32-bit 96 kHz: 200
+		# bytes, not 776). The RK3288 has one IN FIFO big enough for a 776-byte packet
+		# (256/128/128/64/64/32 words), so with 1 ms packets only one card could record at a
+		# time (the second: "No suitable fifo found", the computer gets a stall).
+		echo 2 > "$F/p_hs_bint"
 		echo 0 > "$F/c_chmask"        # nothing from the computer
 		echo 0 > "$F/p_mute_present"  # no controls: no interrupt endpoint
 		echo 0 > "$F/p_volume_present"
@@ -92,16 +145,22 @@ usb_audio() {
 		ln -s "$F" configs/c.1/
 		echo "$id" >> /run/az0x/usb-audio.order
 		n=$((n + 1))
+		slots=$((slots - 1))
 	done < "$conf"
-	# A different set of functions under the same USB id confuses Windows'
-	# descriptor cache: give each set its own bcdDevice.
-	if [ "$n" -gt 0 ]; then
-		echo 0x01$(cksum "$conf" | cut -c1-2) > bcdDevice
-		echo "serial + network + audio" > configs/c.1/strings/0x409/configuration
-	fi
+	[ "$n" -gt 0 ] && what="$what + audio"
 }
 mkdir -p /run/az0x
 usb_audio
+echo "$what" > configs/c.1/strings/0x409/configuration
+# A different set of functions under the same USB id confuses Windows'
+# descriptor cache: give each set its own bcdDevice.
+# (Sound cards alone keep the number they had before MIDI existed.)
+if [ "$what" = "serial + network + audio" ] && [ ! -e /data/az0x/usb-name ]; then
+	echo 0x01$(cksum /data/az0x/usb-audio | cut -c1-2) > bcdDevice
+elif [ "$what" != "serial + network" ] || [ -e /data/az0x/usb-name ]; then
+	sum=$(cat /data/az0x/usb-audio /data/az0x/usb-midi /data/az0x/usb-name 2>/dev/null; echo "$what")
+	echo 0x02$(echo "$sum" | cksum | cut -c1-2) > bcdDevice
+fi
 
 echo "$UDC" > UDC || { echo "az0x: could not enable USB gadget"; exit 0; }
 

@@ -1,0 +1,65 @@
+From: az0x-firmware-kit
+Subject: usb: gadget: f_midi: name the jacks after the interface string
+
+f_midi leaves every jack unnamed (iJack 0), so hosts make up the port name
+(Linux: "<product> MIDI 1"). When strings/<lang>/interface is set in
+configfs, use that string for the jacks too: Linux then calls the port
+"<product> <interface>", and macOS and Windows show the jack name.
+
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -986,6 +986,7 @@
+ 	struct f_midi_opts *opts;
+ 	struct usb_string *us;
+ 	int status, n, jack = 1, i = 0, endpoint_descriptor_index = 0;
++	u8 jack_name = 0;
+ 
+ 	opts = container_of(f->fi, struct f_midi_opts, func_inst);
+ 
+@@ -1020,6 +1021,10 @@
+ 	}
+ 	ac_interface_desc.iInterface = us[MIDI_STR_INTERFACE].id;
+ 	ms_interface_desc.iInterface = us[MIDI_STR_INTERFACE].id;
++	/* A name set in configfs (strings/<lang>/interface) also names the
++	 * jacks: hosts name the ports after them (Linux: "<product> <name>"). */
++	if (!list_empty(&opts->string_list))
++		jack_name = us[MIDI_STR_INTERFACE].id;
+ 
+ 	/* We have two interfaces, AudioControl and MIDIStreaming */
+ 	status = usb_interface_id(c, f);
+@@ -1091,7 +1096,7 @@
+ 		in_ext->bDescriptorSubtype	= USB_MS_MIDI_IN_JACK;
+ 		in_ext->bJackType		= USB_MS_EXTERNAL;
+ 		in_ext->bJackID			= jack++;
+-		in_ext->iJack			= 0;
++		in_ext->iJack			= jack_name;
+ 		midi_function[i++] = (struct usb_descriptor_header *) in_ext;
+ 
+ 		out_emb->bLength		= USB_DT_MIDI_OUT_SIZE(1);
+@@ -1102,7 +1107,7 @@
+ 		out_emb->bNrInputPins		= 1;
+ 		out_emb->pins[0].baSourcePin	= 1;
+ 		out_emb->pins[0].baSourceID	= in_ext->bJackID;
+-		out_emb->iJack			= 0;
++		out_emb->iJack			= jack_name;
+ 		midi_function[i++] = (struct usb_descriptor_header *) out_emb;
+ 
+ 		/* link it to the endpoint */
+@@ -1119,7 +1124,7 @@
+ 		in_emb->bDescriptorSubtype	= USB_MS_MIDI_IN_JACK;
+ 		in_emb->bJackType		= USB_MS_EMBEDDED;
+ 		in_emb->bJackID			= jack++;
+-		in_emb->iJack			= 0;
++		in_emb->iJack			= jack_name;
+ 		midi_function[i++] = (struct usb_descriptor_header *) in_emb;
+ 
+ 		out_ext->bLength =		USB_DT_MIDI_OUT_SIZE(1);
+@@ -1128,7 +1133,7 @@
+ 		out_ext->bJackType =		USB_MS_EXTERNAL;
+ 		out_ext->bJackID =		jack++;
+ 		out_ext->bNrInputPins =		1;
+-		out_ext->iJack =		0;
++		out_ext->iJack =		jack_name;
+ 		out_ext->pins[0].baSourceID =	in_emb->bJackID;
+ 		out_ext->pins[0].baSourcePin =	1;
+ 		midi_function[i++] = (struct usb_descriptor_header *) out_ext;
