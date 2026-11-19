@@ -127,6 +127,11 @@ usb_audio() {
 		echo $(( (1 << ch) - 1 )) > "$F/p_chmask"
 		echo "${rates:-48000}" > "$F/p_srate"
 		echo 4 > "$F/p_ssize"
+		# Packets every 250 us instead of every 1 ms: smaller packets (2 ch 32-bit 96 kHz: 200
+		# bytes, not 776). The RK3288 has one IN FIFO big enough for a 776-byte packet
+		# (256/128/128/64/64/32 words), so with 1 ms packets only one card could record at a
+		# time (the second: "No suitable fifo found", the computer gets a stall).
+		echo 2 > "$F/p_hs_bint"
 		echo 0 > "$F/c_chmask"        # nothing from the computer
 		echo 0 > "$F/p_mute_present"  # no controls: no interrupt endpoint
 		echo 0 > "$F/p_volume_present"
