@@ -95,6 +95,10 @@ ALSA card `UsbMidi` (`hw:UsbMidi,0`): what your app writes there comes out on
 the computer. Put a name in `/data/az0x/usb-name` (one line, for example
 `Djaia`) and the computer shows the device, and with it the MIDI port and the
 Linux ALSA card, by that name instead of `<hostname> (az0x-firmware-kit)`.
+A line in `/data/az0x/usb-midi` (other than `#` comments) names the port
+itself: with `Sync` in it and `Djaia` as the device's name, Linux lists the
+port as `Djaia Sync` instead of `Djaia MIDI 1` (the kit's kernel patch in
+`gen1/common/patches/linux/` gives the USB MIDI jacks that name).
 
 The RK3288 has 6 IN endpoints: the network takes 2, the serial port 2, MIDI 1
 and each sound card 1. When MIDI and the sound cards don't fit next to the
