@@ -67,6 +67,44 @@ make force-menuconfig     # az0x firmware kit -> application source directory
 or set `BR2_PACKAGE_AZ0X_APP_SOURCE_DIR` in your own copy of the device's
 `buildroot.defconfig`. See [app/hello](app/hello) for the smallest example.
 
+### USB sound cards for your app
+
+The device's USB port can also show up on the computer as sound cards (USB
+Audio Class 2: no driver needed on Linux, macOS or Windows 10+), each its own
+device, for example for OBS. List them in `/data/az0x/usb-audio`, one per
+line, and reboot:
+
+```
+# id     channels  rates               name on the computer
+mix      2         44100,48000,96000   Djaia Full Mix
+master   2         44100,48000,96000   Djaia Master
+```
+
+They only send (device to computer), 32-bit, at the rate the computer picks.
+On the device each is an ALSA card (`UAC2Gadget`); `/run/az0x/usb-audio`
+says which card number each id got. Your app plays into it and corrects for
+the drift between its own sound card's clock and the USB clock (the card's
+`Playback Pitch 1000000` control, or resampling). The RK3288 has room for 2
+such cards next to the USB serial port and network; more lines are skipped.
+
+### USB MIDI and the device's name
+
+Create `/data/az0x/usb-midi` (empty is fine) and reboot, and the computer also
+gets a class compliant USB MIDI port, one each way. On the device it's the
+ALSA card `UsbMidi` (`hw:UsbMidi,0`): what your app writes there comes out on
+the computer. Put a name in `/data/az0x/usb-name` (one line, for example
+`Djaia`) and the computer shows the device, and with it the MIDI port and the
+Linux ALSA card, by that name instead of `<hostname> (az0x-firmware-kit)`.
+A line in `/data/az0x/usb-midi` (other than `#` comments) names the port
+itself: with `Sync` in it and `Djaia` as the device's name, Linux lists the
+port as `Djaia Sync` instead of `Djaia MIDI 1` (the kit's kernel patch in
+`gen1/common/patches/linux/` gives the USB MIDI jacks that name).
+
+The RK3288 has 6 IN endpoints: the network takes 2, the serial port 2, MIDI 1
+and each sound card 1. When MIDI and the sound cards don't fit next to the
+serial port, the serial port is left out (SSH over the USB network still
+works); with one sound card everything fits.
+
 ## Flashing
 
 See [docs/RECOVERY.md](docs/RECOVERY.md). In short: start the device in
