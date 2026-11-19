@@ -72,9 +72,11 @@ echo 02:a0:0c:00:00:02 > functions/ecm.usb0/host_addr
 ln -s functions/ecm.usb0 configs/c.1/
 slots=$((slots - 2))
 
-# A USB MIDI port, when /data/az0x/usb-midi exists (its contents don't
-# matter yet): one port each way. Linux, macOS and Windows name it after the
-# device (see usb-name above). On the device it's the ALSA card "UsbMidi"
+# A USB MIDI port, when /data/az0x/usb-midi exists: one port each way. Its
+# first line that isn't a comment, if any, names the port (the USB jacks):
+# Linux calls it "<device name> <port name>" (usb-name "Djaia" + "Sync" =
+# "Djaia Sync"), macOS and Windows show it under the device. Without one,
+# computers name it after the device alone (Linux: "<device name> MIDI 1"). On the device it's the ALSA card "UsbMidi"
 # (hw:UsbMidi,0). It takes the serial port's place if the two don't fit next
 # to the sound cards: SSH over the USB network still works.
 if [ -e /data/az0x/usb-midi ] && [ "$slots" -gt 0 ]; then
@@ -84,6 +86,10 @@ if [ -e /data/az0x/usb-midi ] && [ "$slots" -gt 0 ]; then
 		echo 1 > "$F/in_ports"
 		echo 1 > "$F/out_ports"
 		echo 8 > "$F/qlen"         # (fewer stale messages waiting while nobody reads)
+		port=$(sed -n '/^[^#]/{p;q}' /data/az0x/usb-midi 2>/dev/null)
+		if [ -n "$port" ]; then
+			mkdir -p "$F/strings/0x409" && echo "$port" > "$F/strings/0x409/interface"
+		fi
 		ln -s "$F" configs/c.1/
 		slots=$((slots - 1))
 		what="$what + MIDI"
