@@ -164,6 +164,23 @@ fi
 
 echo "$UDC" > UDC || { echo "az0x: could not enable USB gadget"; exit 0; }
 
+# The controller's interrupt onto a core the kernel keeps free (isolcpus=2-3).
+# With the sound cards streaming it fires ~50,000 times a second, and on core 0
+# (where Linux puts every interrupt) its real-time thread kept pushing the app's
+# screen thread aside (Djaia, measured 2026-11-20: ~35 % of core 0). The first
+# isolated core by default; /data/az0x/usb-irq-cpu: another core number, or
+# "none" to leave it where it is.
+usb_irq_cpu() {
+	cpu=$(sed -n '/^[^#]/{p;q}' /data/az0x/usb-irq-cpu 2>/dev/null)
+	[ -n "$cpu" ] || cpu=$(sed 's/[-,].*//' /sys/devices/system/cpu/isolated 2>/dev/null)
+	case "$cpu" in ''|none|*[!0-9]*) return 0 ;; esac
+	irq=$(grep -m1 "${UDC}" /proc/interrupts | sed 's/^ *\([0-9]*\):.*/\1/')
+	[ -n "$irq" ] && [ -w "/proc/irq/$irq/smp_affinity_list" ] || return 0
+	echo "$cpu" > "/proc/irq/$irq/smp_affinity_list" &&
+		echo "az0x: USB interrupt $irq on core $cpu"
+}
+usb_irq_cpu
+
 # Which ALSA card each sound card became: the gadget's cards appear in the
 # order the functions were linked.
 if [ -s /run/az0x/usb-audio.order ]; then
