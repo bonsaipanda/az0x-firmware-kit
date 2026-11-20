@@ -1,0 +1,12 @@
+config BR2_PACKAGE_AZ0X_RK_VCODEC
+	bool "az0x-rk-vcodec"
+	depends on BR2_LINUX_KERNEL
+	help
+	  The RK3288's hardware video encoder (VEPU1: H.264, VP8, JPEG):
+	  Rockchip's own MPP kernel driver, trimmed to the encoder and
+	  ported to the kit's mainline kernel. Gives /dev/mpp_service for
+	  Rockchip's MPP library (az0x-rockchip-mpp). Needs the vepu and
+	  mpp-srv device tree nodes (gen1/common/patches/linux).
+
+comment "az0x-rk-vcodec needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL

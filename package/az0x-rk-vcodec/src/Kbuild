@@ -1,0 +1,7 @@
+# Rockchip's MPP video codec driver, trimmed to the RK3288's VEPU1 (H.264 / VP8 / JPEG
+# encoder) and ported to the kit's mainline kernel. From rockchip-linux/kernel
+# develop-6.1 (77168c8), drivers/video/rockchip/mpp, licence (GPL-2.0+ OR MIT).
+# Changes are marked "djaia:" in the sources.
+obj-m += rk_vcodec.o
+rk_vcodec-objs := mpp_service.o mpp_common.o mpp_iommu.o mpp_vepu1.o
+ccflags-y += -I$(src)/include -DCONFIG_ROCKCHIP_MPP_VEPU1=1 -DMPP_VERSION="\"rockchip-77168c8+az0x\""
