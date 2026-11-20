@@ -1,0 +1,11 @@
+config BR2_PACKAGE_AZ0X_ROCKCHIP_MPP
+	bool "az0x-rockchip-mpp"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  Rockchip's Media Process Platform library (librockchip_mpp):
+	  the user side of the hardware video codecs. On the RK3288 it
+	  drives the H.264 / VP8 / JPEG encoder through az0x-rk-vcodec.
+	  Also installs mpi_enc_test, Rockchip's encoder test program.
+
+	  https://github.com/rockchip-linux/mpp

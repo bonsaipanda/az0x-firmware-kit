@@ -1,0 +1,64 @@
+From: az0x-firmware-kit
+Subject: ARM: dts: rk3288-az05-nh08: the video encoder for Rockchip's MPP driver
+
+Add the mpp-srv and vepu nodes Rockchip's own kernel uses for the RK3288
+encoder (VEPU1) and enable its IOMMU, for the az0x-rk-vcodec module.
+MixStream Pro (nh08, nh08s) only.
+
+diff -ruN a/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts b/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts
+--- a/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts	2026-11-20 08:03:12.849822736 +0200
++++ b/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts	2026-11-20 08:03:22.733383536 +0200
+@@ -219,3 +219,5 @@
+ 		label = "Control Surface";
+ 	};
+ };
++
++#include "rk3288-az0x-vcodec.dtsi"
+diff -ruN a/arch/arm/boot/dts/rockchip/rk3288-az05-nh08s.dts b/arch/arm/boot/dts/rockchip/rk3288-az05-nh08s.dts
+--- a/arch/arm/boot/dts/rockchip/rk3288-az05-nh08s.dts	2026-11-20 08:03:12.854249788 +0200
++++ b/arch/arm/boot/dts/rockchip/rk3288-az05-nh08s.dts	2026-11-20 08:03:22.733383536 +0200
+@@ -116,3 +116,5 @@
+ 		label = "Control Surface";
+ 	};
+ };
++
++#include "rk3288-az0x-vcodec.dtsi"
+diff -ruN a/arch/arm/boot/dts/rockchip/rk3288-az0x-vcodec.dtsi b/arch/arm/boot/dts/rockchip/rk3288-az0x-vcodec.dtsi
+--- a/arch/arm/boot/dts/rockchip/rk3288-az0x-vcodec.dtsi	1970-01-01 02:00:00.000000000 +0200
++++ b/arch/arm/boot/dts/rockchip/rk3288-az0x-vcodec.dtsi	2026-11-20 08:03:22.732383529 +0200
+@@ -0,0 +1,35 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * az0x firmware kit: the RK3288's hardware video encoder (VEPU1) for Rockchip's
++ * MPP driver (package az0x-rk-vcodec). Nodes as in Rockchip's own rk3288.dtsi
++ * (rockchip-linux/kernel develop-5.10). The mainline video-codec node (hantro)
++ * stays disabled: both drive the same block.
++ */
++
++/ {
++	mpp_srv: mpp-srv {
++		compatible = "rockchip,mpp-service";
++		rockchip,taskqueue-count = <1>;
++		rockchip,resetgroup-count = <1>;
++	};
++
++	vepu: vepu@ff9a0000 {
++		compatible = "rockchip,vpu-encoder-v1";
++		reg = <0x0 0xff9a0000 0x0 0x400>;
++		interrupts = <GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_enc";
++		clocks = <&cru ACLK_VCODEC>, <&cru HCLK_VCODEC>;
++		clock-names = "aclk_vcodec", "hclk_vcodec";
++		resets = <&cru SRST_VCODEC_AXI>, <&cru SRST_VCODEC_AHB>;
++		reset-names = "shared_video_a", "shared_video_h";
++		iommus = <&vpu_mmu>;
++		power-domains = <&power RK3288_PD_VIDEO>;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,taskqueue-node = <0>;
++		rockchip,resetgroup-node = <0>;
++	};
++};
++
++&vpu_mmu {
++	status = "okay";
++};
