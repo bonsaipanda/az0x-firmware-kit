@@ -1,0 +1,57 @@
+From: az0x-firmware-kit
+Subject: ARM: dts: rk3288-az05-nh08: slow12 and slow6 modes for the SD slot
+
+Two more sd-mux states for the MixStream Pro (nh08): like "basic", with
+max-frequency 12.5 MHz and 6.25 MHz, for cards that lose files at 25 MHz.
+
+diff -ruN a/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts b/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts
+--- a/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts	2026-11-21 10:07:08.990464738 +0200
++++ b/arch/arm/boot/dts/rockchip/rk3288-az05-nh08.dts	2026-11-21 10:07:08.993269698 +0200
+@@ -221,3 +221,4 @@
+ };
+ 
+ #include "rk3288-az0x-vcodec.dtsi"
++#include "rk3288-az0x-sdslow.dtsi"
+diff -ruN a/arch/arm/boot/dts/rockchip/rk3288-az0x-sdslow.dtsi b/arch/arm/boot/dts/rockchip/rk3288-az0x-sdslow.dtsi
+--- a/arch/arm/boot/dts/rockchip/rk3288-az0x-sdslow.dtsi	1970-01-01 02:00:00.000000000 +0200
++++ b/arch/arm/boot/dts/rockchip/rk3288-az0x-sdslow.dtsi	2026-11-21 10:07:08.995644295 +0200
+@@ -0,0 +1,39 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * az0x firmware kit: two slower modes for the MixStream Pro's SD slot, for
++ * cards that lose files at the default 25 MHz (the slot's signal path is
++ * marginal). Like "basic", with a lower max-frequency. Switch with sdmode
++ * (or /sys/bus/platform/devices/sd-mux/state): slow12 = 12.5 MHz, slow6 = 6.25 MHz.
++ */
++
++&{/sd-mux} {
++	state-slow12 {
++		fragment@0 {
++			target = <&sdmmc>;
++			__overlay__ {
++				/delete-property/ cap-sd-highspeed;
++				/delete-property/ sd-uhs-sdr12;
++				/delete-property/ sd-uhs-sdr25;
++				/delete-property/ sd-uhs-sdr50;
++				/delete-property/ sd-uhs-ddr50;
++				max-frequency = <12500000>;
++				status = "okay";
++			};
++		};
++	};
++
++	state-slow6 {
++		fragment@0 {
++			target = <&sdmmc>;
++			__overlay__ {
++				/delete-property/ cap-sd-highspeed;
++				/delete-property/ sd-uhs-sdr12;
++				/delete-property/ sd-uhs-sdr25;
++				/delete-property/ sd-uhs-sdr50;
++				/delete-property/ sd-uhs-ddr50;
++				max-frequency = <6250000>;
++				status = "okay";
++			};
++		};
++	};
++};
